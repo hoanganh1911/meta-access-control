@@ -9,9 +9,12 @@ export IMAGE_BASENAME = "access-control"
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
     packagegroup-base-wifi \
-    packagegroup-base-ethernet \
     packagegroup-wifi-tdx-cli \
     packagegroup-wifi-fw-tdx-cli \
+    connman \
+    connman-client \
+    connman-plugin-ethernet \
+    connman-plugin-wifi \
     openssh \
     openssh-sftp-server \
     v4l-utils \
