@@ -1,0 +1,69 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/clock/imx8mp-clock.h>
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+};
+
+&i2c3 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+
+    ov5648: camera@36 {
+        compatible = "ovti,ov5648";
+        reg = <0x36>;
+        
+        /* Cấu hình Xung nhịp (MCLK) */
+        clocks = <&clk IMX8MP_CLK_IPP_DO_CCM_EXT_CLK1>;
+        clock-names = "xclk";
+        assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CCM_EXT_CLK1>;
+        assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+        assigned-clock-rates = <24000000>; /* 24MHz nằm trong dải 6~27MHz của OV5648 */
+
+        /* Cấu hình GPIO Nguồn và Reset */
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_ov5648_gpios>;
+        reset-gpios = <&gpio4 9 GPIO_ACTIVE_LOW>;
+        powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_HIGH>;
+
+        /* MIPI CSI-2 Cấu hình */
+        port {
+            ov5648_to_mipi_ep: endpoint {
+                remote-endpoint = <&mipi_csi0_from_ov5648_ep>;
+                clock-lanes = <0>;
+                data-lanes = <1 2>;
+                link-frequencies = /bits/ 64 <210000000>;
+            };
+        };
+    };
+};
+
+&mipi_csi_0 {
+    status = "okay";
+    port@0 {
+        mipi_csi0_from_ov5648_ep: endpoint {
+            remote-endpoint = <&ov5648_to_mipi_ep>;
+            data-lanes = <1 2>;
+        };
+    };
+};
+
+/* Vô hiệu hóa Ethernet 2 để lấy chân GPIO */
+&fec {
+    status = "disabled";
+};
+
+/* Thiết lập Pin Muxing cho GPIO */
+&iomuxc {
+    pinctrl_ov5648_gpios: ov5648gpiosgrp {
+        fsl,pins = <
+            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x10 /* Powerdown */
+            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x10 /* Reset */
+        >;
+    };
+};
