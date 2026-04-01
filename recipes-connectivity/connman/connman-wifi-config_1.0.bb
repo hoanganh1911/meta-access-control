@@ -4,12 +4,11 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/MIT;md5=0835ad
 
 SRC_URI = "file://wifi.config"
 
-S = "${WORKDIR}/sources"
-UNPACKDIR = "${S}"
+S = "${WORKDIR}"
 
 do_install() {
     install -d ${D}${localstatedir}/lib/connman
-    install -m 0600 ${S}/wifi.config ${D}${localstatedir}/lib/connman/
+    install -m 0600 ${WORKDIR}/wifi.config ${D}${localstatedir}/lib/connman/
 }
 
 FILES:${PN} = "${localstatedir}/lib/connman/wifi.config"
