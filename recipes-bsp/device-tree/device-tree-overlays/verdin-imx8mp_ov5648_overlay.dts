@@ -96,6 +96,8 @@
             mipi_csi0_from_ov5648_ep: endpoint {
                 remote-endpoint = <&ov5648_to_mipi_ep>;
                 data-lanes = <1 2>;
+                clock-lanes = <0>;
+                bus-type = <4>;
             };
         };
         port@1 {
