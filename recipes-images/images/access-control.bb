@@ -6,10 +6,14 @@ DESCRIPTION = "Full system image and environment for Access Control with WiFi, E
 IMAGE_BASENAME = "access-control"
 IMAGE_NAME = "${MACHINE}_${IMAGE_BASENAME}"
 
-# Use OpenSSH instead of Dropbear (resolves conflicts with packagegroup-basic)
+# Use OpenSSH instead of Dropbear (resolves conflicts)
 IMAGE_FEATURES += "ssh-server-openssh"
 
-# Explicitly exclude dropbear to prevent conflict with openssh
+# Remove packagegroup-basic because it has a hard dependency on dropbear 
+# which conflicts with openssh. We will let IMAGE_FEATURES handle SSH.
+IMAGE_INSTALL:remove = "packagegroup-basic"
+
+# Explicitly exclude dropbear just to be safe
 PACKAGE_EXCLUDE = "dropbear"
 
 # List of packages to add to the system
