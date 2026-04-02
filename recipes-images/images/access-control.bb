@@ -16,10 +16,6 @@ IMAGE_INSTALL:remove = "packagegroup-basic"
 # Explicitly exclude dropbear just to be safe
 PACKAGE_EXCLUDE = "dropbear"
 
-# Automatically add our custom overlay to overlays.txt in the boot partition
-TEZI_EXTERNAL_KERNEL_DEVICETREE:append:verdin-imx8mp = " verdin-imx8mp_ov5648_overlay.dtbo"
-TEZI_EXTERNAL_KERNEL_DEVICETREE_BOOT:append:verdin-imx8mp = " verdin-imx8mp_ov5648_overlay.dtbo"
-
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
     packagegroup-base-wifi \
