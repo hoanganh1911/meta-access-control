@@ -1,10 +1,10 @@
-require recipes-images/images/tdx-reference-multimedia-image.bb
+require recipes-images/images/tdx-reference-minimal-image.bb
 
 SUMMARY = "Custom Image for Access Control Project"
 DESCRIPTION = "Full system image and environment for Access Control with WiFi, Ethernet, UART and SSH support"
 
-# Rename the output tarball file
-export IMAGE_BASENAME = "access-control"
+IMAGE_BASENAME = "access-control"
+IMAGE_NAME = "${MACHINE}_${IMAGE_BASENAME}"
 
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
