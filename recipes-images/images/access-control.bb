@@ -30,11 +30,14 @@ IMAGE_INSTALL:append = " \
     connman-plugin-ethernet \
     connman-plugin-wifi \
     v4l-utils \
-    gstreamer1.0 \
+    imx-gpu-viv-wayland \
+    gstreamer1.0-plugins-imx \
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-bad-waylandsink \
+    media-ctl \
+    v4l-utils-kms \
     connman-wifi-config \
     fbgrab \
-    gstreamer1.0-plugins-bad-kms \
 "
