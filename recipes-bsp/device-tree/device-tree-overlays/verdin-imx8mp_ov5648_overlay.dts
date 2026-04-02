@@ -37,7 +37,7 @@
                 remote-endpoint = <&mipi_csi0_from_ov5648_ep>;
                 clock-lanes = <0>;
                 data-lanes = <1 2>;
-                link-frequencies = /bits/ 64 <210000000>;
+                link-frequencies = /bits/ 64 <168000000>;
             };
         };
     };
