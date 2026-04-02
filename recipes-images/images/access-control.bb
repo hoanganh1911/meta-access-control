@@ -36,9 +36,8 @@ IMAGE_INSTALL:append = " \
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-bad-waylandsink \
+    gstreamer1.0 \
     media-ctl \
-    v4l-utils-kms \
     connman-wifi-config \
     fbgrab \
 "
