@@ -109,11 +109,9 @@
     cap_device {
         status = "okay";
     };
+
     ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
         port@0 {
-            reg = <0>;
             isi_0_from_mipi_csi0_ep: endpoint {
                 remote-endpoint = <&mipi_csi0_to_isi_0_ep>;
             };
