@@ -119,9 +119,9 @@
         dovdd-supply = <&reg_ov5648_dovdd>;
         dvdd-supply = <&reg_ov5648_dvdd>;
 
-        clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
+        clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
         clock-names = "xclk";
-        assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
+        assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
         assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
         assigned-clock-rates = <24000000>;
 
@@ -153,10 +153,20 @@
         >;
     };
 
-    /* MCLK output for camera XCLK via CCM_CLKO1 */
+    /* MCLK: CSI_1_MCLK = SODIMM 91 = GPIO1_IO15 as CCM_CLKO2 */
     pinctrl_csi_mclk: csimclkgrp {
         fsl,pins = <
-            MX8MP_IOMUXC_GPIO1_IO14__CCM_CLKO1    0x59
+            MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2    0x59
         >;
     };
+};
+
+/*
+ * CRITICAL: Override pinctrl_gpio_hog3 from base DTB.
+ * This group holds GPIO1_IO15 (SODIMM 91 / CSI_1_MCLK) in GPIO mode.
+ * By emptying it here, we release GPIO1_IO15 so the camera driver
+ * can claim it via csimclkgrp as CCM_CLKO2 (24MHz MCLK for OV5648).
+ */
+&pinctrl_gpio_hog3 {
+    fsl,pins = <>;
 };
