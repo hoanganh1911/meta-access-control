@@ -53,6 +53,18 @@
     };
 };
 
+&cameradev {
+    status = "okay";
+};
+
+&isi_0 {
+    status = "okay";
+
+    cap_device {
+        status = "okay";
+    };
+};
+
 /* Vô hiệu hóa Ethernet 2 để lấy chân GPIO */
 &fec {
     status = "disabled";
