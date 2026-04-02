@@ -113,7 +113,7 @@
         compatible = "ovti,ov5648";
         reg = <0x36>;
         pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_ov5648_gpios>;
+        pinctrl-0 = <&pinctrl_ov5648_gpios &pinctrl_csi_mclk>;
 
         avdd-supply = <&reg_ov5648_avdd>;
         dovdd-supply = <&reg_ov5648_dovdd>;
@@ -122,7 +122,7 @@
         clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
         clock-names = "xclk";
         assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
-        assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_50M>;
+        assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
         assigned-clock-rates = <24000000>;
 
         powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_LOW>;
@@ -150,6 +150,13 @@
         fsl,pins = <
             MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x10
             MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x10
+        >;
+    };
+
+    /* MCLK output for camera XCLK via CCM_CLKO1 */
+    pinctrl_csi_mclk: csimclkgrp {
+        fsl,pins = <
+            MX8MP_IOMUXC_GPIO1_IO14__CCM_CLKO1    0x59
         >;
     };
 };
