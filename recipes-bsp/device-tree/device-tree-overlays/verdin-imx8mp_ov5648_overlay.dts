@@ -76,8 +76,7 @@
 };
 
 /* MIPI CSI-2 Receiver Pipeline */
-/* Khắc phục lỗi "No remote pad found" bằng cách nối tường minh CSI -> ISI */
-&mipi_csi_0 {
+&csi0 {
     status = "okay";
     ports {
         #address-cells = <1>;
@@ -100,8 +99,13 @@
     };
 };
 
+/* Media Controller Framework Registration */
+&cameradev {
+    status = "okay";
+};
+
 /* ISI (Image Sensor Interface) Processor */
-&isi_0 {
+&isi0 {
     status = "okay";
     cap_device {
         status = "okay";
