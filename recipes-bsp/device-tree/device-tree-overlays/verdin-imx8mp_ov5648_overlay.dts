@@ -6,10 +6,6 @@
 #include <dt-bindings/gpio/gpio.h>
 
 &{/} {
-    /* 
-     * Khai báo các bộ quản lý nguồn (Regulators) chuẩn chỉ 
-     * để Driver camera nhận diện và làm sạch log dmesg.
-     */
     reg_ov5648_avdd: regulator-ov5648-avdd {
         compatible = "regulator-fixed";
         regulator-name = "ov5648_avdd";
@@ -35,7 +31,79 @@
     };
 };
 
-/* Verdin I2C_4_CSI (SODIMM 93, 95) */
+/*
+ * MIPI CSI-2 Receiver (Samtec driver)
+ *
+ * The NXP Samtec driver (mxc_mipi_csi.c) reads lanes as follows:
+ *   1. Reads "bus-width" from CSI root node  -> max_num_lanes
+ *   2. Calls of_graph_get_endpoint_by_regs(node, port=0, reg=1)
+ *      This finds the endpoint with reg=1 under port@0
+ *   3. Reads "data-lanes" as u32 from that endpoint -> num_lanes
+ *
+ * Therefore the sensor endpoint MUST be reg=1 under port@0,
+ * and the port@0 node needs #address-cells/#size-cells for reg to work.
+ */
+&mipi_csi_0 {
+    status = "okay";
+    bus-width = <2>;
+
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        /* port@0: MIPI CSI-2 D-PHY input */
+        port@0 {
+            reg = <0>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            /* endpoint reg=0: connection to ISI (not sensor) */
+            mipi_csi0_to_isi_0_ep: endpoint@0 {
+                reg = <0>;
+                remote-endpoint = <&isi_0_from_mipi_csi0_ep>;
+            };
+
+            /*
+             * endpoint reg=1: connection to sensor
+             * CRITICAL: reg=1 here because driver calls
+             * of_graph_get_endpoint_by_regs(node, 0, 1)
+             * and reads data-lanes as u32 from this node
+             */
+            mipi_csi0_from_ov5648_ep: endpoint@1 {
+                reg = <1>;
+                remote-endpoint = <&ov5648_to_mipi_ep>;
+                data-lanes = <2>;
+                bus-type = <4>;
+            };
+        };
+    };
+};
+
+/* ISI Image Sensor Interface */
+&isi_0 {
+    status = "okay";
+    cap_device {
+        status = "okay";
+    };
+
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        port@0 {
+            reg = <0>;
+            isi_0_from_mipi_csi0_ep: endpoint {
+                remote-endpoint = <&mipi_csi0_to_isi_0_ep>;
+            };
+        };
+    };
+};
+
+/* Media Controller */
+&{/soc@0/bus@32c00000/camera} {
+    status = "okay";
+};
+
+/* Verdin I2C_4_CSI */
 &i2c3 {
     #address-cells = <1>;
     #size-cells = <0>;
@@ -46,20 +114,17 @@
         reg = <0x36>;
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_ov5648_gpios>;
-        
-        /* Kết nối nguồn chuẩn chỉ theo Binding YAML */
+
         avdd-supply = <&reg_ov5648_avdd>;
         dovdd-supply = <&reg_ov5648_dovdd>;
         dvdd-supply = <&reg_ov5648_dvdd>;
 
-        /* Cung cấp xung nhịp Master Clock cho Camera */
         clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
         clock-names = "xclk";
         assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
         assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_50M>;
         assigned-clock-rates = <24000000>;
 
-        /* GPIO điều khiển nguồn và reset */
         powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_LOW>;
         reset-gpios = <&gpio4 9 GPIO_ACTIVE_LOW>;
 
@@ -75,57 +140,16 @@
     };
 };
 
-/* MIPI CSI-2 Receiver Pipeline */
-&mipi_csi_0 {
-    status = "okay";
-    ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
-        port@0 {
-            reg = <0>;
-            mipi_csi0_from_ov5648_ep: endpoint {
-                remote-endpoint = <&ov5648_to_mipi_ep>;
-                data-lanes = <1 2>;
-                clock-lanes = <0>;
-                bus-type = <4>;
-            };
-        };
-        port@1 {
-            reg = <1>;
-            mipi_csi0_to_isi_0_ep: endpoint {
-                remote-endpoint = <&isi_0_from_mipi_csi0_ep>;
-            };
-        };
-    };
-};
-
-
-/* ISI (Image Sensor Interface) Processor */
-&isi_0 {
-    status = "okay";
-    cap_device {
-        status = "okay";
-    };
-
-    ports {
-        port@0 {
-            isi_0_from_mipi_csi0_ep: endpoint {
-                remote-endpoint = <&mipi_csi0_to_isi_0_ep>;
-            };
-        };
-    };
-};
-/* Vô hiệu hóa Ethernet 2 để lấy chân GPIO */
+/* Disable FEC to free GPIO4_IO08/09 */
 &fec {
     status = "disabled";
 };
 
-/* Thiết lập Pin Muxing cho GPIO */
 &iomuxc {
     pinctrl_ov5648_gpios: ov5648gpiosgrp {
         fsl,pins = <
-            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x10 /* Powerdown */
-            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x10 /* Reset */
+            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x10
+            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x10
         >;
     };
 };
