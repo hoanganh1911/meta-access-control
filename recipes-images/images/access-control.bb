@@ -9,6 +9,9 @@ IMAGE_NAME = "${MACHINE}_${IMAGE_BASENAME}"
 # Use OpenSSH instead of Dropbear (resolves conflicts with packagegroup-basic)
 IMAGE_FEATURES += "ssh-server-openssh"
 
+# Explicitly exclude dropbear to prevent conflict with openssh
+PACKAGE_EXCLUDE = "dropbear"
+
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
     packagegroup-base-wifi \
