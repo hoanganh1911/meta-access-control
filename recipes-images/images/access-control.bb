@@ -35,4 +35,6 @@ IMAGE_INSTALL:append = " \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     connman-wifi-config \
+    fbgrab \
+    gstreamer1.0-plugins-bad-kms \
 "
