@@ -30,7 +30,7 @@ IMAGE_INSTALL:append = " \
     connman-plugin-ethernet \
     connman-plugin-wifi \
     v4l-utils \
-    imx-gpu-viv-tools-libvulkan \
+    imx-gpu-viv-tools \
     imx-gst1.0-plugin \
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
