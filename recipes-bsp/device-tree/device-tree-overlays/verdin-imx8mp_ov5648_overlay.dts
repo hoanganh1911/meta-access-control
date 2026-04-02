@@ -76,12 +76,24 @@
 };
 
 /* MIPI CSI-2 Receiver Pipeline */
+/* Khắc phục lỗi "No remote pad found" bằng cách nối tường minh CSI -> ISI */
 &mipi_csi_0 {
     status = "okay";
-    port@0 {
-        mipi_csi0_from_ov5648_ep: endpoint {
-            remote-endpoint = <&ov5648_to_mipi_ep>;
-            data-lanes = <1 2>;
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        port@0 {
+            reg = <0>;
+            mipi_csi0_from_ov5648_ep: endpoint {
+                remote-endpoint = <&ov5648_to_mipi_ep>;
+                data-lanes = <1 2>;
+            };
+        };
+        port@1 {
+            reg = <1>;
+            mipi_csi0_to_isi_0_ep: endpoint {
+                remote-endpoint = <&isi_0_from_mipi_csi0_ep>;
+            };
         };
     };
 };
@@ -94,12 +106,20 @@
 /* ISI (Image Sensor Interface) Processor */
 &isi_0 {
     status = "okay";
-
     cap_device {
         status = "okay";
     };
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        port@0 {
+            reg = <0>;
+            isi_0_from_mipi_csi0_ep: endpoint {
+                remote-endpoint = <&mipi_csi0_to_isi_0_ep>;
+            };
+        };
+    };
 };
-
 /* Vô hiệu hóa Ethernet 2 để lấy chân GPIO */
 &fec {
     status = "disabled";
