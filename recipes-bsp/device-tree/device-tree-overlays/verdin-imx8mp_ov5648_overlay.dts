@@ -100,11 +100,6 @@
     };
 };
 
-/* Media Controller Framework Registration */
-&cameradev {
-    status = "okay";
-};
-
 /* ISI (Image Sensor Interface) Processor */
 &isi_0 {
     status = "okay";
