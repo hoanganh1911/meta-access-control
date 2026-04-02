@@ -16,6 +16,9 @@ IMAGE_INSTALL:remove = "packagegroup-basic"
 # Explicitly exclude dropbear just to be safe
 PACKAGE_EXCLUDE = "dropbear"
 
+# Automatically add our custom overlay to overlays.txt in the boot partition
+TEZI_EXTERNAL_KERNEL_DEVICETREE_BOOT:append = " verdin-imx8mp_ov5648_overlay.dtbo"
+
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
     packagegroup-base-wifi \
@@ -27,6 +30,7 @@ IMAGE_INSTALL:append = " \
     connman-plugin-wifi \
     v4l-utils \
     gstreamer1.0 \
+    gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     connman-wifi-config \
