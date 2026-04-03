@@ -47,13 +47,14 @@
 &mipi_csi_0 {
     status = "okay";
     bus-width = <2>;
+    /delete-node/ ports;
 
     /* ONE port, ONE endpoint pointing to the sensor ONLY.
      * No ISI endpoint here - ISI<->CSI is internal hardware connection. */
     port {
         mipi_csi0_from_ov5648_ep: endpoint {
             remote-endpoint = <&ov5648_to_mipi_ep>;
-            data-lanes = <2>;   /* u32 count of data lanes */
+            data-lanes = <1 2>;   /* u32 count of data lanes */
             bus-type = <4>;     /* MIPI CSI-2 D-PHY */
         };
     };
