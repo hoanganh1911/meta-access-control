@@ -32,69 +32,38 @@
 };
 
 /*
- * MIPI CSI-2 Receiver (Samtec driver)
+ * MIPI CSI-2 Receiver (Samtec driver: imx8-mipi-csi2-sam.c)
  *
- * The NXP Samtec driver (mxc_mipi_csi.c) reads lanes as follows:
- *   1. Reads "bus-width" from CSI root node  -> max_num_lanes
- *   2. Calls of_graph_get_endpoint_by_regs(node, port=0, reg=1)
- *      This finds the endpoint with reg=1 under port@0
- *   3. Reads "data-lanes" as u32 from that endpoint -> num_lanes
+ * KEY ARCHITECTURE (imx8-media-dev.c register_sensor_entities):
+ *   - mx8-img-md finds sensors by walking: CSI node -> FIRST child (port)
+ *     -> FIRST child of port (endpoint) -> remote-endpoint -> SENSOR
+ *   - It calls of_find_i2c_device_by_node(sensor) to verify I2C
+ *   - ISI <-> CSI connection is managed by ISI's "interface" property
+ *     in the BASE DTB, NOT by OF graph ports!
  *
- * Therefore the sensor endpoint MUST be reg=1 under port@0,
- * and the port@0 node needs #address-cells/#size-cells for reg to work.
+ * The imx8-mipi-csi2-sam.c driver reads lanes:
+ *   of_graph_get_next_endpoint(node, NULL) -> FIRST endpoint -> data-lanes
  */
 &mipi_csi_0 {
     status = "okay";
     bus-width = <2>;
 
-    ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
-
-        /* port@0: MIPI CSI-2 D-PHY input */
-        port@0 {
-            reg = <0>;
-            #address-cells = <1>;
-            #size-cells = <0>;
-
-            /* endpoint reg=0: connection to ISI (not sensor) */
-            mipi_csi0_to_isi_0_ep: endpoint@0 {
-                reg = <0>;
-                remote-endpoint = <&isi_0_from_mipi_csi0_ep>;
-            };
-
-            /*
-             * endpoint reg=1: connection to sensor
-             * CRITICAL: reg=1 here because driver calls
-             * of_graph_get_endpoint_by_regs(node, 0, 1)
-             * and reads data-lanes as u32 from this node
-             */
-            mipi_csi0_from_ov5648_ep: endpoint@1 {
-                reg = <1>;
-                remote-endpoint = <&ov5648_to_mipi_ep>;
-                data-lanes = <2>;
-                bus-type = <4>;
-            };
+    /* ONE port, ONE endpoint pointing to the sensor ONLY.
+     * No ISI endpoint here - ISI<->CSI is internal hardware connection. */
+    port {
+        mipi_csi0_from_ov5648_ep: endpoint {
+            remote-endpoint = <&ov5648_to_mipi_ep>;
+            data-lanes = <2>;   /* u32 count of data lanes */
+            bus-type = <4>;     /* MIPI CSI-2 D-PHY */
         };
     };
 };
 
-/* ISI Image Sensor Interface */
+/* ISI: enable only. ISI<->CSI link is set by "interface" property in base DTB. */
 &isi_0 {
     status = "okay";
     cap_device {
         status = "okay";
-    };
-
-    ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
-        port@0 {
-            reg = <0>;
-            isi_0_from_mipi_csi0_ep: endpoint {
-                remote-endpoint = <&mipi_csi0_to_isi_0_ep>;
-            };
-        };
     };
 };
 
