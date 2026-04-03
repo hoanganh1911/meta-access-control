@@ -36,4 +36,5 @@ IMAGE_INSTALL:append = " \
     media-ctl \
     connman-wifi-config \
     fbgrab \
+    i2c-tools \
 "
