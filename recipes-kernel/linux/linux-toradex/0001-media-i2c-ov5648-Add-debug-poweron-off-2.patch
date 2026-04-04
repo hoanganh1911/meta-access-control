@@ -1,0 +1,65 @@
+From 99b6ae7bc47d0586a5d266c9480ebc00aecd696e Mon Sep 17 00:00:00 2001
+From: maivananh111 <aaanh01@gmail.com>
+Date: Sat, 4 Apr 2026 14:31:58 +0700
+Subject: [PATCH] media: i2c: ov5648: Add debug poweron/off - 2
+
+Signed-off-by: maivananh111 <aaanh01@gmail.com>
+---
+ drivers/media/i2c/ov5648.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/media/i2c/ov5648.c b/drivers/media/i2c/ov5648.c
+index aa10eb4e3991..dd16bb684d34 100644
+--- a/drivers/media/i2c/ov5648.c
++++ b/drivers/media/i2c/ov5648.c
+@@ -971,15 +971,15 @@ static int ov5648_read(struct ov5648_sensor *sensor, u16 address, u8 *value)
+ 
+ 	ret = i2c_master_send(client, data, sizeof(data));
+ 	if (ret < 0) {
+-		dev_dbg(&client->dev, "i2c send error at address %#04x\n",
+-			address);
++		dev_info(&client->dev, "i2c send error at address %#04x, err = %d\n",
++			address, ret);
+ 		return ret;
+ 	}
+ 
+ 	ret = i2c_master_recv(client, value, 1);
+ 	if (ret < 0) {
+-		dev_dbg(&client->dev, "i2c recv error at address %#04x\n",
+-			address);
++		dev_info(&client->dev, "i2c recv error at address %#04x, err = %d\n",
++			address, ret);
+ 		return ret;
+ 	}
+ 
+@@ -994,8 +994,8 @@ static int ov5648_write(struct ov5648_sensor *sensor, u16 address, u8 value)
+ 
+ 	ret = i2c_master_send(client, data, sizeof(data));
+ 	if (ret < 0) {
+-		dev_dbg(&client->dev, "i2c send error at address %#04x\n",
+-			address);
++		dev_info(&client->dev, "i2c send error at address %#04x, err = %d\n",
++			address, ret);
+ 		return ret;
+ 	}
+ 
+@@ -1862,6 +1862,7 @@ static int ov5648_sensor_init(struct ov5648_sensor *sensor)
+ 
+ static int ov5648_sensor_power(struct ov5648_sensor *sensor, bool on)
+ {
++	dev_info(sensor->dev, "%s -> %s\n", __func__, on? "ON":"OFF");
+ 	/* Keep initialized to zero for disable label. */
+ 	int ret = 0;
+ 
+@@ -2429,7 +2430,7 @@ static int ov5648_resume(struct device *dev)
+ 	goto complete;
+ 
+ error_power:
+-	ov5648_sensor_power(sensor, false);
++// 	ov5648_sensor_power(sensor, false);
+ 
+ complete:
+ 	mutex_unlock(&sensor->mutex);
+-- 
+2.34.1
+

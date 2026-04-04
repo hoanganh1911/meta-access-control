@@ -57,19 +57,6 @@
     };
 };
 
-/* ISP: Enable for RAW sensor processing (debayering, etc.) */
-&isi_0 {
-    status = "disabled";
-};
-
-&isp_0 {
-    status = "okay";
-};
-
-&dewarp {
-    status = "okay";
-};
-
 /* Media Controller */
 &{/soc@0/bus@32c00000/camera} {
     status = "okay";
@@ -79,7 +66,7 @@
 &i2c3 {
     #address-cells = <1>;
     #size-cells = <0>;
-    status = "okay";
+    status = "disabled";
 
     ov5648: camera@36 {
         compatible = "ovti,ov5648";
@@ -91,11 +78,11 @@
         dovdd-supply = <&reg_ov5648_dovdd>;
         dvdd-supply = <&reg_ov5648_dvdd>;
 
-        clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
-        clock-names = "xclk";
-        assigned-clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
-        assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
-        assigned-clock-rates = <24000000>;
+        clocks = <&clk IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+		clock-names = "xclk";
+		assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
+		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+		assigned-clock-rates = <24000000>;
 
         powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_LOW>;  
         reset-gpios = <&gpio4 9 GPIO_ACTIVE_LOW>;
@@ -106,8 +93,6 @@
             ov5648_to_mipi_ep: endpoint {
                 remote-endpoint = <&mipi_csi0_from_ov5648_ep>;
                 data-lanes = <1 2>;
-                clock-lanes = <0>;
-                clock-noncontinuous;
                 link-frequencies = /bits/ 64 <210000000 168000000>;
             };
         };
@@ -141,4 +126,35 @@
                 <&pinctrl_gpio3>, <&pinctrl_gpio4>,
                 <&pinctrl_gpio7>, <&pinctrl_gpio8>,
                 <&pinctrl_gpio_hog1>, <&pinctrl_hdmi_hog>;
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+
+	m2m_device {
+		status = "okay";
+	};
+};
+
+&isi_1 {
+	status = "okay";
+	cap_device {
+		status = "okay";
+	};
+};
+
+&isp_0 {
+	status = "okay";
+};
+
+&isp_1 {
+	status = "okay";
+};
+
+&dewarp {
+	status = "okay";
 };
