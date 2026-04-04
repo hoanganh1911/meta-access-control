@@ -46,26 +46,28 @@
  */
 &mipi_csi_0 {
     status = "okay";
-    bus-width = <2>;
-    /delete-node/ ports;
+    /delete-node/ port;
 
-    /* ONE port, ONE endpoint pointing to the sensor ONLY.
-     * No ISI endpoint here - ISI<->CSI is internal hardware connection. */
-    port {
+    port@0 {
         mipi_csi0_from_ov5648_ep: endpoint {
             remote-endpoint = <&ov5648_to_mipi_ep>;
-            data-lanes = <1 2>;   /* u32 count of data lanes */
-            bus-type = <4>;     /* MIPI CSI-2 D-PHY */
+            data-lanes = <2>;   /* number of lanes for ISP driver */
+            csis-hs-settle = <16>;
         };
     };
 };
 
-/* ISI: enable only. ISI<->CSI link is set by "interface" property in base DTB. */
+/* ISP: Enable for RAW sensor processing (debayering, etc.) */
 &isi_0 {
+    status = "disabled";
+};
+
+&isp_0 {
     status = "okay";
-    cap_device {
-        status = "okay";
-    };
+};
+
+&dewarp {
+    status = "okay";
 };
 
 /* Media Controller */
@@ -104,6 +106,8 @@
             ov5648_to_mipi_ep: endpoint {
                 remote-endpoint = <&mipi_csi0_from_ov5648_ep>;
                 data-lanes = <1 2>;
+                clock-lanes = <0>;
+                clock-noncontinuous;
                 link-frequencies = /bits/ 64 <210000000 168000000>;
             };
         };
@@ -126,7 +130,7 @@
     /* MCLK: CSI_1_MCLK = SODIMM 91 = SAI3_MCLK as Audio Master Clock 3 */
     pinctrl_csi_mclk: csimclkgrp {
         fsl,pins = <
-            MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK    0x59
+            MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK    0xd6
         >;
     };
 };
