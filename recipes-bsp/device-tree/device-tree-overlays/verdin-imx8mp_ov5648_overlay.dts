@@ -95,7 +95,7 @@
         assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
         assigned-clock-rates = <24000000>;
 
-        powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_HIGH>;  
+        powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_LOW>;  
         reset-gpios = <&gpio4 9 GPIO_ACTIVE_LOW>;
 
         status = "okay";
