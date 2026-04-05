@@ -44,12 +44,20 @@ Hệ thống mượn chân từ Ethernet 2 để điều khiển Camera:
 - **Reset**: **SODIMM 207** (GPIO4_IO09).
 - **Xác minh gốc**: `imx8mp-verdin.dtsi:L1004-1005` xác nhận các chân này vốn là của Pad `SAI1_RXD6/7`.
 
-### 2.3 Giao tiếp Clock (MCLK)
-- **Chuẩn Verdin**: CSI_1_MCLK.
-- **Vị trí vật lý**: **SODIMM 91**.
-- **SoC Pad**: **GPIO1_IO15** (Địa chỉ Control Pad: `0x30330050`).
-- **Xác minh gốc**: `imx8mp-verdin.dtsi:L1130` xác nhận SODIMM 91 nối vào Pad `GPIO1_IO15`.
-- **Cấu hình xung**: Sử dụng chế độ **CCM_CLKO2** (ALT 6) để phát xung clock từ SoC.
+### 2.3 Cơ chế xuất xung nhịp (Clocking Strategy) cho SODIMM 91
+Để điều khiển Camera, SoC cần phát xung 24MHz ổn định tại chân **SODIMM 91** (`CSI_1_MCLK`). Hệ thống sử dụng cơ chế sau:
+
+#### Phương pháp: Sử dụng Hệ thống Xung nhịp (CCM_CLKO2)
+Đây là cách chuyên dụng nhất, cho phép Kernel quản lý bật/tắt xung đồng bộ với Driver Camera.
+- **Chế độ (Mode)**: **ALT 6** (`CCM_CLKO2`).
+- **Nguồn xung**: `CLKOUT2` (có thể cấu hình lấy từ OSC 24M qua Device Tree).
+- **SoC Pad**: **GPIO1_IO15** (Dẫn chứng: `imx8mp-verdin.dtsi:L1130`).
+- **ALT Code**: `0x6` (Dẫn chứng: `imx8mp-pinfunc.h`).
+
+| Thành phần | Tệp tham chiếu | Nội dung xác thực (Grep) | Ý nghĩa kỹ thuật |
+| :--- | :--- | :--- | :--- |
+| **SODIMM 91** | `imx8mp-verdin.dtsi` | `/* CSI_1_MCLK */ <...GPIO1_IO15...>; /* SODIMM 91 */` | Khẳng định thực thể vật lý. |
+| **MCLK ALT** | `imx8mp-pinfunc.h` | `MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2 ... 0x6` | Khẳng định phương pháp ALT 6. |
 
 ---
 
@@ -77,7 +85,7 @@ Việc vận hành driver camera yêu cầu sự phối hợp từ cấu cấu h
     *   *Tại sao dùng .cfg?*: Thay vì sửa trực tiếp file cấu hình nhân khổng lồ, chúng ta sử dụng tệp `.cfg` để khai báo các biến cần thiết (Vd: `CONFIG_VIDEO_OV5648=y`).
     *   *Cơ chế Merge*: Trong quá trình biên dịch (Bitbake), hệ thống sẽ tự động hợp nhất các dòng trong `.cfg` vào cấu hình gốc (`defconfig`) của Toradex. 
     *   *Kết quả*: Điều này giúp bật Driver `ov5648.c` để nhân Linux tạo ra các thiết bị truyền dẫn như `/dev/video0` và `/dev/media0`.
-- **Yêu cầu Xung nhịp (MCLK)**: Camera chỉ có thể bắt đầu giao tiếp I2C khi nhận được xung nhịp **MCLK 24MHz** tại chân **SODIMM 91 (GPIO1_IO15)** từ SoC.
+- **Yêu cầu Xung nhịp (MCLK)**: Camera chỉ có thể bắt đầu giao tiếp I2C khi nhận được xung nhịp **MCLK 24MHz** tại chân **SODIMM 91 (GPIO1_IO15)**. Hệ điều hành cần nạp đúng chế độ **ALT 6** để chân này phát xung thay vì giữ mức GPIO tĩnh.
 
 #### C. Lệnh xác thực "Hàng rào Driver" (Hardware Proof)
 ```bash
@@ -188,7 +196,18 @@ Sử dụng khi I2C không trả về địa chỉ 0x36 dù đã nạp DTBO:
    - Lệnh: `i2cget -y 2 0x36 0x300a w` (Phải trả về `0x5648`).
 
 3. **Kiểm tra Cây xung nhịp (Clock Tree)**:
-   - Lệnh: `cat /sys/kernel/debug/clk/clk_summary | grep -i mclk` (Phải báo `24000000 Hz` và `enabled`).
+   - Lệnh: `cat /sys/kernel/debug/clk/clk_summary | grep -i clkout2`
+   - **Giải thích cú pháp**: 
+     * `clk_summary`: Tệp ảo trong `debugfs` chứa toàn bộ sơ đồ phân phối xung nhịp của SoC.
+     * `clkout2`: Tên logic của bộ tạo xung được gán cho chân 91 (CCM_CLKO2).
+   - **Kết quả kỳ vọng**:
+     ```text
+     clk_node             enable_count  prepare_count  rate
+     ----------------------------------------------------------
+     clkout2              1             1              24000000
+     ```
+     * `rate = 24000000`: Xung nhịp đúng tần số 24MHz.
+     * `enable_count = 1`: Xung đang được phát (đã bật).
 
 4. **Kiểm tra Backlight**: `echo 10 > /sys/class/backlight/backlight/brightness` (PWM check).
 
