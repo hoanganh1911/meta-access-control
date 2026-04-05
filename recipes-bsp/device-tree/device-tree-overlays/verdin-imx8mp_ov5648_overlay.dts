@@ -107,8 +107,8 @@
 &iomuxc {
     pinctrl_ov5648_gpios: ov5648gpiosgrp {
         fsl,pins = <
-            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x10
-            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x10
+            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x6
+            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x6
         >;
     };
 
