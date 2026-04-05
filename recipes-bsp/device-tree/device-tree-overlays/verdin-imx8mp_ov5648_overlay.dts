@@ -66,7 +66,7 @@
 &i2c3 {
     #address-cells = <1>;
     #size-cells = <0>;
-    status = "disabled";
+    status = "okay";
 
     ov5648: camera@36 {
         compatible = "ovti,ov5648";
@@ -78,9 +78,9 @@
         dovdd-supply = <&reg_ov5648_dovdd>;
         dvdd-supply = <&reg_ov5648_dvdd>;
 
-        clocks = <&clk IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+        clocks = <&clk IMX8MP_CLK_CLKOUT2>;
 		clock-names = "xclk";
-		assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
+		assigned-clocks = <&clk IMX8MP_CLK_CLKOUT2>;
 		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
 		assigned-clock-rates = <24000000>;
 
@@ -112,10 +112,10 @@
         >;
     };
 
-    /* MCLK: CSI_1_MCLK = SODIMM 91 = SAI3_MCLK as Audio Master Clock 3 */
+    /* MCLK: CSI_1_MCLK = SODIMM 91 = GPIO1_IO15 as Clock Output 2 */
     pinctrl_csi_mclk: csimclkgrp {
         fsl,pins = <
-            MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK    0xd6
+            MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2    0xd6
         >;
     };
 };
