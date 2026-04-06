@@ -18,13 +18,6 @@ PACKAGE_EXCLUDE = "dropbear"
 
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
-    packagegroup-base-wifi \
-    packagegroup-wifi-tdx-cli \
-    packagegroup-wifi-fw-tdx-cli \
-    connman \
-    connman-client \
-    connman-plugin-ethernet \
-    connman-plugin-wifi \
     v4l-utils \
     imx-gpu-viv-tools \
     imx-gst1.0-plugin \
@@ -34,7 +27,6 @@ IMAGE_INSTALL:append = " \
     gstreamer1.0-plugins-bad-kms \
     gstreamer1.0 \
     media-ctl \
-    connman-wifi-config \
     fbgrab \
     i2c-tools \
 "
