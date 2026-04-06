@@ -1,0 +1,117 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/clock/imx8mp-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+
+&{/} {
+    reg_ov5640_vcore: regulator-ov5640-vcore {
+        compatible = "regulator-fixed";
+        regulator-name = "ov5640_vcore";
+        regulator-min-microvolt = <1500000>;
+        regulator-max-microvolt = <1500000>;
+        regulator-always-on;
+    };
+
+    reg_ov5640_vio: regulator-ov5640-vio {
+        compatible = "regulator-fixed";
+        regulator-name = "ov5640_vio";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        regulator-always-on;
+    };
+
+    reg_ov5640_vana: regulator-ov5640-vana {
+        compatible = "regulator-fixed";
+        regulator-name = "ov5640_vana";
+        regulator-min-microvolt = <2800000>;
+        regulator-max-microvolt = <2800000>;
+        regulator-always-on;
+    };
+
+    debug_mclk_bus: debug-mclk-bus {
+        compatible = "simple-pm-bus";
+        clocks = <&clk IMX8MP_CLK_CLKOUT2>;
+        status = "okay";
+    };
+};
+
+&mipi_csi_0 {
+    status = "okay";
+    /delete-node/ port;
+
+    port@0 {
+        mipi_csi0_from_ov5640_ep: endpoint {
+            remote-endpoint = <&ov5640_to_mipi_ep>;
+            data-lanes = <2>;
+            csis-hs-settle = <13>;
+        };
+    };
+};
+
+&i2c3 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+
+    ov5640: camera@3c {
+        compatible = "ovti,ov5640";
+        reg = <0x3c>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_ov5640_gpios &pinctrl_ov5640_mclk>;
+
+        AVDD-supply = <&reg_ov5640_vana>;
+        DOVDD-supply = <&reg_ov5640_vio>;
+        DVDD-supply = <&reg_ov5640_vcore>;
+
+        clocks = <&clk IMX8MP_CLK_CLKOUT2>;
+        clock-names = "xclk";
+        assigned-clocks = <&clk IMX8MP_CLK_CLKOUT2_SEL>, 
+                          <&clk IMX8MP_CLK_CLKOUT2_DIV>, 
+                          <&clk IMX8MP_CLK_CLKOUT2>;
+        assigned-clock-parents = <&clk IMX8MP_CLK_24M>, 
+                                 <&clk IMX8MP_CLK_CLKOUT2_SEL>, 
+                                 <&clk IMX8MP_CLK_CLKOUT2_DIV>;
+        assigned-clock-rates = <24000000>, <24000000>, <24000000>;
+
+        powerdown-gpios = <&gpio4 8 GPIO_ACTIVE_HIGH>; 
+        reset-gpios = <&gpio4 9 GPIO_ACTIVE_LOW>;   
+        status = "okay";
+
+        port {
+            ov5640_to_mipi_ep: endpoint {
+                remote-endpoint = <&mipi_csi0_from_ov5640_ep>;
+                data-lanes = <1 2>;
+            };
+        };
+    };
+};
+
+&isi_0 {
+    status = "okay";
+    cap_device { status = "okay"; };
+    m2m_device { status = "okay"; };
+};
+
+&isp_0 { status = "okay"; };
+&dewarp { status = "okay"; };
+
+&iomuxc {
+    pinctrl_ov5640_gpios: ov5640gpiosgrp {
+        fsl,pins = <
+            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x106 
+            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x106
+        >;
+    };
+
+    pinctrl_ov5640_mclk: ov5640mclkgrp {
+        fsl,pins = <
+            MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2    0x156
+        >;
+    };
+};
+
+&fec {
+    status = "disabled";
+};
