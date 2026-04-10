@@ -29,4 +29,6 @@ IMAGE_INSTALL:append = " \
     media-ctl \
     fbgrab \
     i2c-tools \
+    alsa-utils \
+    alsa-plugins \
 "
