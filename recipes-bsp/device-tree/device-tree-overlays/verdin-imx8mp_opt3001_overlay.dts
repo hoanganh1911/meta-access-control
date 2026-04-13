@@ -1,0 +1,15 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+};
+
+&i2c4 {
+    status = "okay";
+
+    opt3001: light-sensor@44 {
+        compatible = "ti,opt3001";
+        reg = <0x44>;
+    };
+};

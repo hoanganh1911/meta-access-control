@@ -1,0 +1,14 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+};
+
+&uart2 {
+    status = "okay";
+    /* Disable flow control as RCWL-1670 only uses 2 wires (TX/RX) */
+    /delete-property/ uart-has-rtscts;
+};
