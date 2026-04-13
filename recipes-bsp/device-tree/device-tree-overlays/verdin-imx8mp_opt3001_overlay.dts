@@ -5,7 +5,7 @@
     compatible = "toradex,verdin-imx8mp";
 };
 
-&i2c4 {
+&i2c3 {
     status = "okay";
 
     opt3001: light-sensor@44 {
