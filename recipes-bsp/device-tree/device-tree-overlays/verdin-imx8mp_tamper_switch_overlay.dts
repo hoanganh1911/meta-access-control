@@ -1,0 +1,50 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+
+    fragment@0 {
+        target = <&iomuxc>;
+        __overlay__ {
+            pinctrl_tamper_switch: tamperswitchgrp {
+                fsl,pins = <
+                    MX8MP_IOMUXC_SAI1_TXD3__GPIO4_IO15          0x1c4
+                >;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            tamper_switch {
+                compatible = "gpio-keys";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_tamper_switch>;
+
+                tamper {
+                    label = "SOM_TAMPER_IN";
+                    gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_WAKEUP>;
+                    interrupt-parent = <&gpio4>;
+                    interrupts = <15 IRQ_TYPE_EDGE_BOTH>;
+                    wakeup-source;
+                };
+            };
+        };
+    };
+
+    /* Disable FEC (Ethernet 2) which uses SODIMM 215/SAI1_TXD3 */
+    fragment@2 {
+        target = <&fec>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+};

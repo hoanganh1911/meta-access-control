@@ -6,6 +6,7 @@ SRC_URI += "\
     file://verdin-imx8mp_opt3001_overlay.dts \
     file://verdin-imx8mp_vl53l5x_overlay.dts \
     file://verdin-imx8mp_sr602_overlay.dts \
+    file://verdin-imx8mp_tamper_switch_overlay.dts \
 "
 
 do_collect_overlays:prepend() {
@@ -15,4 +16,5 @@ do_collect_overlays:prepend() {
     cp ${WORKDIR}/verdin-imx8mp_opt3001_overlay.dts ${S}/
     cp ${WORKDIR}/verdin-imx8mp_vl53l5x_overlay.dts ${S}/
     cp ${WORKDIR}/verdin-imx8mp_sr602_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_tamper_switch_overlay.dts ${S}/
 }
