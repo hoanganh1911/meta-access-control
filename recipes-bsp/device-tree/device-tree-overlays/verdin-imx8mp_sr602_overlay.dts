@@ -1,0 +1,58 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+
+    fragment@0 {
+        target = <&iomuxc>;
+        __overlay__ {
+            pinctrl_sr602: sr602grp {
+                fsl,pins = <
+                    MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11          0x1c4
+                >;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            sr602 {
+                compatible = "gpio-keys";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_sr602>;
+
+                motion {
+                    label = "Motion Detector SR602";
+                    gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_WAKEUP>;
+                    interrupt-parent = <&gpio1>;
+                    interrupts = <11 IRQ_TYPE_EDGE_BOTH>;
+                    wakeup-source;
+                };
+            };
+        };
+    };
+
+    /* Disable PWM_2 which is on the same pin (SODIMM 16) */
+    fragment@2 {
+        target = <&pwm2>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    /* Disable backlight mezzanine which might use PWM_2 */
+    fragment@3 {
+        target = <&backlight_mezzanine>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+};
