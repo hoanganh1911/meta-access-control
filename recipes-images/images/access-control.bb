@@ -31,4 +31,6 @@ IMAGE_INSTALL:append = " \
     i2c-tools \
     alsa-utils \
     alsa-plugins \
+    stmvl53l5cx \
+    stmvl53l5cx-user \
 "

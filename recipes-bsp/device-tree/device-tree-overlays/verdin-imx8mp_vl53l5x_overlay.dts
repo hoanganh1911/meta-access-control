@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+};
+
+&i2c4 {
+    status = "okay";
+
+    vl53l5x: tof-sensor@29 {
+        compatible = "st,stmvl53l5cx";
+        reg = <0x29>;
+        status = "okay";
+    };
+};
