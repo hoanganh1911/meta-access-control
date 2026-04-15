@@ -5,120 +5,161 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <errno.h>
+#include <stdint.h>
+#include <sys/time.h>
 
 #define UART_PORT "/dev/ttymxc0"
 
-int setup_uart(int fd) {
-    struct termios tty;
-    if (tcgetattr(fd, &tty) != 0) {
-        perror("Error from tcgetattr");
-        return -1;
-    }
+// PN532 Constants
+#define PN532_PREAMBLE                (0x00)
+#define PN532_STARTCODE1              (0x00)
+#define PN532_STARTCODE2              (0xFF)
+#define PN532_POSTAMBLE               (0x00)
+#define PN532_HOSTTOPN532             (0xD4)
+#define PN532_PN532TOHOST             (0xD5)
 
-    cfsetospeed(&tty, B115200);
-    cfsetispeed(&tty, B115200);
+#define PN532_COMMAND_GETFIRMWAREVERSION (0x02)
+#define PN532_COMMAND_SAMCONFIGURATION   (0x14)
 
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
-    tty.c_iflag &= ~IGNBRK;         // disable break processing
-    tty.c_lflag = 0;                // no signaling chars, no echo,
-                                    // no canonical processing
-    tty.c_oflag = 0;                // no remapping, no delays
-    tty.c_cc[VMIN]  = 0;            // read doesn't block
-    tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
-
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
-
-    tty.c_cflag |= (CLOCAL | CREAD); // ignore modem controls,
-                                    // enable reading
-    tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        perror("Error from tcsetattr");
-        return -1;
-    }
-    return 0;
-}
-
-void print_hex(unsigned char *buf, int len) {
+// Helper: In ra chuỗi Hex để debug
+void print_hex(const char* label, const uint8_t *buf, int len) {
+    printf("%s: ", label);
     for (int i = 0; i < len; i++) {
         printf("%02X ", buf[i]);
     }
     printf("\n");
 }
 
-int main() {
-    printf("PN532 UART Test Application\n");
-    printf("Opening %s...\n", UART_PORT);
+int setup_uart(int fd) {
+    struct termios tty;
+    if (tcgetattr(fd, &tty) != 0) return -1;
 
+    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, B115200);
+
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;         // 8-bit chars
+    tty.c_cflag &= ~PARENB;     // no parity
+    tty.c_cflag &= ~CSTOPB;     // 1 stop bit
+    tty.c_cflag &= ~CRTSCTS;    // no flow control
+
+    tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY | IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+    tty.c_oflag &= ~OPOST;
+
+    tty.c_cc[VMIN]  = 0;            
+    tty.c_cc[VTIME] = 10; // Timeout 1s
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) return -1;
+    return 0;
+}
+
+// Hàm gửi lệnh chuẩn PN532 (tự tính checksum)
+int8_t write_command(int fd, const uint8_t *header, uint8_t hlen, const uint8_t *body, uint8_t blen) {
+    uint8_t length = hlen + blen + 1; // +1 cho TFI (D4)
+    uint8_t checksum;
+    uint8_t sum = PN532_HOSTTOPN532;
+
+    uint8_t packet[32];
+    int p = 0;
+
+    packet[p++] = PN532_PREAMBLE;
+    packet[p++] = PN532_STARTCODE1;
+    packet[p++] = PN532_STARTCODE2;
+    packet[p++] = length;
+    packet[p++] = ~length + 1;
+    packet[p++] = PN532_HOSTTOPN532;
+
+    for (int i = 0; i < hlen; i++) {
+        packet[p++] = header[i];
+        sum += header[i];
+    }
+    for (int i = 0; i < blen; i++) {
+        packet[p++] = body[i];
+        sum += body[i];
+    }
+
+    checksum = ~sum + 1;
+    packet[p++] = checksum;
+    packet[p++] = PN532_POSTAMBLE;
+
+    print_hex("Write", packet, p);
+    if (write(fd, packet, p) < 0) return -1;
+    return 0;
+}
+
+// Đọc khung ACK (00 00 FF 00 FF 00)
+int8_t read_ack(int fd) {
+    uint8_t ack[6];
+    uint8_t expected_ack[] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+    
+    int n = read(fd, ack, 6);
+    if (n < 6) {
+        printf("ACK Timeout or incomplete (%d bytes)\n", n);
+        return -1;
+    }
+    
+    print_hex("ACK", ack, 6);
+    if (memcmp(ack, expected_ack, 6) != 0) {
+        printf("Invalid ACK frame!\n");
+        return -2;
+    }
+    return 0;
+}
+
+void wakeup(int fd) {
+    printf("Sending wakeup sequence...\n");
+    uint8_t dummy[] = {0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    write(fd, dummy, sizeof(dummy));
+    usleep(50000); // 50ms delay
+    tcflush(fd, TCIOFLUSH); // Xóa buffer sau khi thức dậy
+}
+
+int main() {
     int fd = open(UART_PORT, O_RDWR | O_NOCTTY | O_SYNC);
     if (fd < 0) {
-        fprintf(stderr, "Error opening %s: %s\n", UART_PORT, strerror(errno));
-        return EXIT_FAILURE;
+        perror("Open UART");
+        return 1;
     }
 
     if (setup_uart(fd) != 0) {
-        close(fd);
-        return EXIT_FAILURE;
+        printf("Setup UART failed\n");
+        return 1;
     }
 
-    // Wake up PN532: Send a long preamble
-    unsigned char wakeup[] = {0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    printf("Sending wakeup sequence...\n");
-    write(fd, wakeup, sizeof(wakeup));
-    usleep(100000); // Wait 100ms
-    
-    // Clear any junk in the buffer
-    tcflush(fd, TCIOFLUSH);
+    wakeup(fd);
 
-    // GetFirmwareVersion command for PN532
-    // Frame: 00 00 FF [LEN] [LCS] D4 [CMD] [DATA] [DCS] 00
-    // LEN = 2 (D4 02)
-    // LCS = 0xFE (0x100 - 0x02)
-    // DCS = 0x2A (0x100 - (0xD4+0x02) = 0x100 - 0xD6 = 0x2A)
-    unsigned char get_version[] = {0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD4, 0x02, 0x2A, 0x00};
-    
-    printf("Sending GetFirmwareVersion command...\n");
-    if (write(fd, get_version, sizeof(get_version)) < 0) {
-        perror("Failed to write to UART");
-        close(fd);
-        return EXIT_FAILURE;
-    }
+    // Bước 1: Get Firmware Version
+    printf("\n--- Test 1: Get Firmware Version ---\n");
+    uint8_t cmd_ver = PN532_COMMAND_GETFIRMWAREVERSION;
+    write_command(fd, &cmd_ver, 1, NULL, 0);
 
-    unsigned char buffer[32];
-    printf("Waiting for response...\n");
-    
-    // Read ACK first
-    int n = read(fd, buffer, 6);
-    if (n > 0) {
-        printf("ACK sequence: ");
-        print_hex(buffer, n);
-    } else {
-        printf("No ACK received.\n");
-    }
-
-    // Read Data Response
-    n = read(fd, buffer, sizeof(buffer));
-    if (n > 0) {
-        printf("Response received (%d bytes): ", n);
-        print_hex(buffer, n);
-        
-        // Response should start with 00 00 FF ... D5 03
-        // If we see D5 03, it means success
-        for(int i=0; i < n-1; i++) {
-            if (buffer[i] == 0xD5 && buffer[i+1] == 0x03) {
-                printf("Successfully identified PN532!\n");
-                printf("Firmware Version: IC=0x%02X, Ver=%d, Rev=%d, Support=0x%02X\n", 
-                        buffer[i+2], buffer[i+3], buffer[i+4], buffer[i+5]);
-                break;
+    if (read_ack(fd) == 0) {
+        uint8_t resp[32];
+        int n = read(fd, resp, sizeof(resp));
+        if (n > 0) {
+            print_hex("Response", resp, n);
+            // Tìm kiếm D5 03 trong response
+            for (int i = 0; i < n - 1; i++) {
+                if (resp[i] == 0xD5 && resp[i+1] == 0x03) {
+                    printf("Success! Found PN532. IC: 0x%02X, Ver: %d.%d\n", 
+                           resp[i+2], resp[i+3], resp[i+4]);
+                    break;
+                }
             }
         }
-    } else {
-        printf("No data response received. Check wiring (TX/RX Swap?) and PN532 power.\n");
+    }
+
+    // Bước 2: SAM Configuration (Cấu hình chế độ hoạt động bình thường)
+    printf("\n--- Test 2: SAM Configuration ---\n");
+    uint8_t sam_cmd[] = {PN532_COMMAND_SAMCONFIGURATION, 0x01, 0x14, 0x01};
+    write_command(fd, sam_cmd, 4, NULL, 0);
+    if (read_ack(fd) == 0) {
+        printf("SAM Configured successfully (ACK received).\n");
     }
 
     close(fd);
-    printf("Test finished.\n");
-    return EXIT_SUCCESS;
+    printf("\nTest finished.\n");
+    return 0;
 }

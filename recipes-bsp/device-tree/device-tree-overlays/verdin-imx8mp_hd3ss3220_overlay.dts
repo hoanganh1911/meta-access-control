@@ -1,10 +1,28 @@
 /dts-v1/;
 /plugin/;
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/usb/pd.h>
+
 / {
     compatible = "toradex,verdin-imx8mp";
 
+    /* Cấu hình nguồn VBUS cho USB_2 (USB 3.0) */
     fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            reg_usb2_vbus: regulator-usb2-vbus {
+                compatible = "regulator-fixed";
+                gpio = <&gpio1 0 GPIO_ACTIVE_LOW>; /* SODIMM 185, đảo cực tính */
+                regulator-name = "usb2_vbus";
+                regulator-min-microvolt = <5000000>;
+                regulator-max-microvolt = <5000000>;
+                enable-active-high; /* Drive active level (Low) when enabled */
+            };
+        };
+    };
+
+    fragment@1 {
         target = <&i2c4>;
         __overlay__ {
             status = "okay";
@@ -13,14 +31,49 @@
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
-                
-                // Cấu hình role-switch cho phép chuyển đổi Host/Device
-                usb_con: connector {
+
+                connector {
                     compatible = "usb-c-connector";
-                    label = "USB-C";
+                    label = "USB-C-SS";
                     data-role = "dual";
+                    power-role = "dual";
+                    try-power-role = "sink";
+                    vbus-supply = <&reg_usb2_vbus>;
+
+                    ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        port@0 {
+                            reg = <0>;
+                            usb_con_endpoint: endpoint {
+                                remote-endpoint = <&usb3_1_endpoint>;
+                            };
+                        };
+                    };
                 };
             };
+        };
+    };
+
+    fragment@2 {
+        target = <&usb3_1>;
+        __overlay__ {
+            status = "okay";
+            usb-role-switch;
+            port {
+                usb3_1_endpoint: endpoint {
+                    remote-endpoint = <&usb_con_endpoint>;
+                };
+            };
+        };
+    };
+
+    fragment@3 {
+        target = <&usb_dwc3_1>;
+        __overlay__ {
+            dr_mode = "otg";
+            usb-role-switch;
+            vbus-supply = <&reg_usb2_vbus>;
         };
     };
 };
