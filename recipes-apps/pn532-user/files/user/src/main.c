@@ -6,6 +6,7 @@
  * Implements: Wakeup, SAMConfig, GetFirmwareVersion, InListPassiveTarget.
  */
 
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include <termios.h>
 #include <errno.h>
 #include <stdint.h>
+#include <time.h>
 #include <sys/time.h>
 
 /* ── UART device ─────────────────────────────────────────────────────────── */
@@ -144,7 +146,9 @@ static void pn532_wakeup(int fd)
     tcflush(fd, TCIFLUSH);
 
     uint8_t wake[] = {0x55, 0x00, 0x00};
-    write(fd, wake, sizeof(wake));
+    if (write(fd, wake, sizeof(wake)) != sizeof(wake)) {
+        perror("write wakeup");
+    }
     usleep(2000); /* 2 ms — matches Arduino delay(2) */
 }
 
