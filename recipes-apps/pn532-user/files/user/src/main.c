@@ -112,8 +112,18 @@ void wakeup(int fd) {
     printf("Sending wakeup sequence...\n");
     uint8_t dummy[] = {0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     write(fd, dummy, sizeof(dummy));
-    usleep(50000); // 50ms delay
-    tcflush(fd, TCIOFLUSH); // Xóa buffer sau khi thức dậy
+    usleep(100000); // 100ms - đủ thời gian cho PN532 thức dậy
+
+    // Drain buffer có kiểm soát giống Arduino: đọc bỏ dữ liệu rác
+    // KHÔNG dùng tcflush vì nó xóa cả ACK mà PN532 gửi về!
+    uint8_t discard;
+    int drained = 0;
+    while (read(fd, &discard, 1) > 0) {
+        drained++;
+    }
+    if (drained > 0) {
+        printf("Wakeup: drained %d junk bytes.\n", drained);
+    }
 }
 
 int main() {
