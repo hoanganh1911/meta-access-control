@@ -1,0 +1,26 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+
+    fragment@0 {
+        target = <&i2c4>;
+        __overlay__ {
+            status = "okay";
+
+            typec@47 {
+                compatible = "ti,hd3ss3220";
+                reg = <0x47>;
+                status = "okay";
+                
+                // Cấu hình role-switch cho phép chuyển đổi Host/Device
+                usb_con: connector {
+                    compatible = "usb-c-connector";
+                    label = "USB-C";
+                    data-role = "dual";
+                };
+            };
+        };
+    };
+};

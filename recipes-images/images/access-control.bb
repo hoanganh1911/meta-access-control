@@ -39,4 +39,5 @@ IMAGE_INSTALL:append = " \
     ws2812-user \
     cryptoauthlib \
     atecc-test \
+    usb-c-test \
 "
