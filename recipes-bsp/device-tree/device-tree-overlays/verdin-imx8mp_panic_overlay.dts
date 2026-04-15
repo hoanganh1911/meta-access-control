@@ -1,0 +1,51 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+
+    fragment@0 {
+        target = <&iomuxc>;
+        __overlay__ {
+            pinctrl_panic: panicgrp {
+                fsl,pins = <
+                    MX8MP_IOMUXC_SAI1_TXD1__GPIO4_IO13          0x1c4 /* SODIMM 219 */
+                    MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14          0x1c4 /* SODIMM 217 */
+                >;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            panic_signals {
+                compatible = "gpio-keys";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_panic>;
+
+                panic_in {
+                    label = "SOM_PANIC_IN";
+                    gpios = <&gpio4 13 GPIO_ACTIVE_LOW>;
+                    linux,code = <KEY_RESTART>;
+                };
+            };
+
+            panic_output {
+                compatible = "gpio-leds";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_panic>;
+
+                panic_out {
+                    label = "SOM_PANIC_OUTPUT";
+                    gpios = <&gpio4 14 GPIO_ACTIVE_HIGH>;
+                    default-state = "off";
+                };
+            };
+        };
+    };
+};

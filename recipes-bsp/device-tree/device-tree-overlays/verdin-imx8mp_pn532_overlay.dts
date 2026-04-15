@@ -1,0 +1,15 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+};
+
+/* Verdin UART_1 (SODIMM 129, 131) */
+&uart1 {
+    status = "okay";
+    /* Disable flow control as PN532 usually uses 2 wires (TX/RX) */
+    /delete-property/ uart-has-rtscts;
+};

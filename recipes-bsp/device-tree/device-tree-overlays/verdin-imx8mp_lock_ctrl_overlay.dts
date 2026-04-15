@@ -1,0 +1,37 @@
+/dts-v1/;
+/plugin/;
+
+#include "imx8mp-pinfunc.h"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+    compatible = "toradex,verdin-imx8mp";
+
+    fragment@0 {
+        target = <&iomuxc>;
+        __overlay__ {
+            pinctrl_lock_ctrl: lockctrlgrp {
+                fsl,pins = <
+                    MX8MP_IOMUXC_SAI1_RXD5__GPIO4_IO07          0x16
+                >;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            lock_ctrl {
+                compatible = "gpio-leds";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_lock_ctrl>;
+
+                som_lock_ctrl {
+                    label = "SOM_LOCK_CTRL";
+                    gpios = <&gpio4 7 GPIO_ACTIVE_HIGH>;
+                    default-state = "on"; /* Initial state is HIGH to trigger relay */
+                };
+            };
+        };
+    };
+};

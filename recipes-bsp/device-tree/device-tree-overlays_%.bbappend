@@ -7,6 +7,11 @@ SRC_URI += "\
     file://verdin-imx8mp_vl53l5x_overlay.dts \
     file://verdin-imx8mp_sr602_overlay.dts \
     file://verdin-imx8mp_tamper_switch_overlay.dts \
+    file://verdin-imx8mp_pn532_overlay.dts \
+    file://verdin-imx8mp_lock_ctrl_overlay.dts \
+    file://verdin-imx8mp_ws2812_overlay.dts \
+    file://verdin-imx8mp_panic_overlay.dts \
+    file://verdin-imx8mp_atecc608a_overlay.dts \
 "
 
 do_collect_overlays:prepend() {
@@ -17,4 +22,9 @@ do_collect_overlays:prepend() {
     cp ${WORKDIR}/verdin-imx8mp_vl53l5x_overlay.dts ${S}/
     cp ${WORKDIR}/verdin-imx8mp_sr602_overlay.dts ${S}/
     cp ${WORKDIR}/verdin-imx8mp_tamper_switch_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_pn532_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_lock_ctrl_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_ws2812_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_panic_overlay.dts ${S}/
+    cp ${WORKDIR}/verdin-imx8mp_atecc608a_overlay.dts ${S}/
 }

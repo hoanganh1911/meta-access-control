@@ -1,0 +1,20 @@
+SUMMARY = "User-space test application for WS2812 LED strip via GPIO"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+
+DEPENDS = "libgpiod"
+
+SRC_URI = " \
+    file://user \
+"
+
+S = "${WORKDIR}/user/src"
+
+do_compile() {
+    oe_runmake
+}
+
+do_install() {
+    install -d ${D}${bindir}
+    install -m 0755 ws2812-test ${D}${bindir}/ws2812-test
+}
