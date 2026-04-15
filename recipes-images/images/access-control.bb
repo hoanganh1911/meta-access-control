@@ -34,7 +34,6 @@ IMAGE_INSTALL:append = " \
     stmvl53l5cx \
     stmvl53l5cx-user \
     libnfc \
-    libnfc-bin \
     libgpiod \
     libgpiod-tools \
     ws2812-user \
