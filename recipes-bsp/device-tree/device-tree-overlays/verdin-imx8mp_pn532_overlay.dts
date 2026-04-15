@@ -7,9 +7,21 @@
     compatible = "toradex,verdin-imx8mp";
 };
 
-/* Verdin UART_1 (SODIMM 129, 131) */
+&iomuxc {
+    /* Định nghĩa pinctrl riêng để không bị ảnh hưởng bởi mặc định */
+    pinctrl_uart1_pn532: uart1pn532grp {
+        fsl,pins = <
+            MX8MP_IOMUXC_UART1_RXD__UART1_DCE_RX    0x140
+            MX8MP_IOMUXC_UART1_TXD__UART1_DCE_TX    0x140
+        >;
+    };
+};
+
 &uart1 {
+    /* Gán group pin mới */
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_uart1_pn532>;
     status = "okay";
-    /* Disable flow control as PN532 usually uses 2 wires (TX/RX) */
+    /* Tắt flow control hoàn toàn */
     /delete-property/ uart-has-rtscts;
 };
