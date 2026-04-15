@@ -33,7 +33,8 @@ IMAGE_INSTALL:append = " \
     alsa-plugins \
     stmvl53l5cx \
     stmvl53l5cx-user \
-    pn532-user \
+    libnfc \
+    libnfc-bin \
     libgpiod \
     libgpiod-tools \
     ws2812-user \

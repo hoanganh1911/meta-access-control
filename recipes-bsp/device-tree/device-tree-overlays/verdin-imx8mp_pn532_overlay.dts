@@ -22,6 +22,10 @@
     pinctrl-names = "default";
     pinctrl-0 = <&pinctrl_uart1_pn532>;
     status = "okay";
-    /* Tắt flow control hoàn toàn */
+    /* Tắt flow control để phù hợp với kết nối 2 dây RX/TX */
     /delete-property/ uart-has-rtscts;
+
+    pn532: nfc {
+        compatible = "nxp,pn532";
+    };
 };
