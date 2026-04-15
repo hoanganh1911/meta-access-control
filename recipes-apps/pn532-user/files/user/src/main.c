@@ -6,7 +6,7 @@
  * Implements: Wakeup, SAMConfig, GetFirmwareVersion, InListPassiveTarget.
  */
 
-#define _POSIX_C_SOURCE 199309L
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
