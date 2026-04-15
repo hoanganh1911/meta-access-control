@@ -40,4 +40,5 @@ IMAGE_INSTALL:append = " \
     cryptoauthlib \
     atecc-test \
     usb-c-test \
+    rcwl1670-user \
 "
