@@ -36,7 +36,7 @@ IMAGE_INSTALL:append = " \
     libnfc \
     libgpiod \
     libgpiod-tools \
-    ws2812-user \
+    ws2812-mod \
     cryptoauthlib \
     atecc-test \
     usb-c-test \
