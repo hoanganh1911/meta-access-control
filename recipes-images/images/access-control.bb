@@ -41,4 +41,5 @@ IMAGE_INSTALL:append = " \
     atecc-test \
     usb-c-test \
     rcwl1670-user \
+    sr602-mod \
 "

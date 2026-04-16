@@ -24,18 +24,10 @@
         target-path = "/";
         __overlay__ {
             sr602 {
-                compatible = "gpio-keys";
+                compatible = "sr602-mod";
                 pinctrl-names = "default";
                 pinctrl-0 = <&pinctrl_sr602>;
-
-                motion {
-                    label = "Motion Detector SR602";
-                    gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
-                    linux,code = <KEY_WAKEUP>;
-                    interrupt-parent = <&gpio1>;
-                    interrupts = <11 IRQ_TYPE_EDGE_BOTH>;
-                    wakeup-source;
-                };
+                gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
             };
         };
     };
