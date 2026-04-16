@@ -21,16 +21,12 @@
     fragment@1 {
         target-path = "/";
         __overlay__ {
-            led_strip {
-                compatible = "gpio-leds";
+            ws2812 {
+                compatible = "custom,ws2812-bitbang";
                 pinctrl-names = "default";
                 pinctrl-0 = <&pinctrl_led_strip>;
-
-                led_strip_in {
-                    label = "LED_STRIP_IN";
-                    gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
-                    default-state = "off";
-                };
+                led-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+                status = "okay";
             };
         };
     };
