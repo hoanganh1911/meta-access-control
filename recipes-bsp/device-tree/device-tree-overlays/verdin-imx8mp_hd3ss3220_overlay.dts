@@ -7,18 +7,19 @@
 / {
     compatible = "toradex,verdin-imx8mp";
 
-    /* Cấu hình nguồn VBUS cho USB_2 (USB 3.0) */
+    /* 
+     * Cấu hình lại regulator có sẵn của Verdin để điều khiển SODIMM 185 (USB_2_EN)
+     * Schematic cho thấy U8 là AP2151 (Active-High). 
+     */
     fragment@0 {
-        target-path = "/";
+
+        target = <&reg_usb2_vbus>;
         __overlay__ {
-            reg_usb2_vbus: regulator-usb2-vbus {
-                compatible = "regulator-fixed";
-                gpio = <&gpio1 0 GPIO_ACTIVE_LOW>; /* SODIMM 185, đảo cực tính */
-                regulator-name = "usb2_vbus";
-                regulator-min-microvolt = <5000000>;
-                regulator-max-microvolt = <5000000>;
-                enable-active-high; /* Drive active level (Low) when enabled */
-            };
+            status = "okay";
+            gpio = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+            enable-active-high;
+            regulator-min-microvolt = <5000000>;
+            regulator-max-microvolt = <5000000>;
         };
     };
 
@@ -73,7 +74,9 @@
         __overlay__ {
             dr_mode = "otg";
             usb-role-switch;
+            /* Cần gán vbus cho cả controller để nó biết khi nào có nguồn */
             vbus-supply = <&reg_usb2_vbus>;
         };
     };
 };
+
