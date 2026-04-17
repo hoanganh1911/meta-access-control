@@ -17,6 +17,8 @@
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
+                /* Khai báo nó là một role switch */
+                usb-role-switch;
 
                 connector {
                     compatible = "usb-c-connector";
@@ -25,10 +27,14 @@
                     power-role = "dual";
                     try-power-role = "sink";
                     
-                    /* Link to the USB controller */
-                    port {
-                        usb_con_endpoint: endpoint {
-                            remote-endpoint = <&dwc3_0_endpoint>;
+                    ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        port@0 {
+                            reg = <0>;
+                            usb_con_endpoint: endpoint {
+                                remote-endpoint = <&dwc3_0_endpoint>;
+                            };
                         };
                     };
                 };
@@ -36,22 +42,14 @@
         };
     };
 
-    /* Cấu hình trực tiếp vào node dwc3 bên trong usb3_1 */
+    /* Cấu hình USB Controller dùng đường dẫn tuyệt đối để đảm bảo chính xác */
     fragment@1 {
-        target = <&usb3_1>;
-        __overlay__ {
-            status = "okay";
-        };
-    };
-
-    fragment@2 {
         target-path = "/soc@0/usb@32f10108/usb@38200000";
         __overlay__ {
             status = "okay";
             dr_mode = "otg";
             usb-role-switch;
-            role-switch-default-mode = "none";
-
+            /* Buộc nó phải nhận node typec@47 làm switch */
             port {
                 dwc3_0_endpoint: endpoint {
                     remote-endpoint = <&usb_con_endpoint>;
