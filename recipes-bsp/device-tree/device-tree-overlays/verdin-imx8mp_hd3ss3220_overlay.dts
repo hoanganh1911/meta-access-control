@@ -15,11 +15,11 @@
             #size-cells = <0>;
             status = "okay";
 
-            typec@47 {
+            hd3ss3220@47 {
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
-                usb-role-switch;  
+                
                 connector {
                     compatible = "usb-c-connector";
                     label = "USB-C-SS";
@@ -42,22 +42,25 @@
         };
     };
 
-    /* Cấu hình USB2 Controller */
+    /* Cấu hình USB2 Controller (wrapper) */
     fragment@1 {
         target = <&usb3_1>;
         __overlay__ {
             status = "okay";
-            usb-role-switch;
+        };
+    };
 
-            /* Cấu hình trực tiếp dwc3 core bên trong để bẻ gãy dependency cycle */
-            usb@38200000 {
-                dr_mode = "otg";
-                usb-role-switch;
-                
-                port {
-                    usb3_1_endpoint: endpoint {
-                        remote-endpoint = <&usb_con_endpoint>;
-                    };
+    /* Cấu hình dwc3 core bên trong để bẻ gãy dependency cycle */
+    fragment@2 {
+        target = <&usb_dwc3_1>;
+        __overlay__ {
+            dr_mode = "otg";
+            usb-role-switch;
+            role-switch-default-mode = "peripheral";
+            
+            port {
+                usb3_1_endpoint: endpoint {
+                    remote-endpoint = <&usb_con_endpoint>;
                 };
             };
         };
