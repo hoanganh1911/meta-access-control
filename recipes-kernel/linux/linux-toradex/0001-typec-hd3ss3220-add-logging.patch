@@ -1,0 +1,13 @@
+--- a/drivers/usb/typec/hd3ss3220.c
++++ b/drivers/usb/typec/hd3ss3220.c
+@@ -107,6 +107,10 @@
+ {
+ 	enum usb_role role_state = hd3ss3220_get_attached_state(hd3ss3220);
+ 
++	dev_info(hd3ss3220->dev, "Role changed to %s\n",
++		 role_state == USB_ROLE_HOST ? "HOST" :
++		 role_state == USB_ROLE_DEVICE ? "DEVICE" : "NONE");
++
+ 	usb_role_switch_set_role(hd3ss3220->role_sw, role_state);
+ 	if (role_state == USB_ROLE_NONE)
+ 		hd3ss3220_set_source_pref(hd3ss3220,

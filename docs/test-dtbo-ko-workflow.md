@@ -33,10 +33,16 @@ Có **2 cách** để build và deploy `.dtbo` / `.ko` — mỗi cách phù hợ
 cd ~/Toradex_iMX8M-/toradex-bsp
 source export
 
-# Build kernel module
+# Build kernel module (Out-of-tree: các driver tự thêm bên ngoài)
 bitbake ws2812-mod
 bitbake sr602-mod
 bitbake stmvl53l5cx
+
+# Build virtual/kernel (In-tree: các driver có sẵn trong nhân như HD3SS3220, WM8904)
+# Dùng khi bạn thay đổi cấu hình .cfg hoặc áp dụng .patch cho nhân
+# QUAN TRỌNG: Phải clean state trước khi build lại
+bitbake virtual/kernel -c cleansstate
+bitbake virtual/kernel
 
 # Build device tree overlays
 bitbake device-tree-overlays
@@ -91,6 +97,85 @@ DTBO_PATH=$(find toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/device-tree-
 scp ${DTBO_PATH} root@${BOARD_IP}:/tmp/
 ```
 
+### A.4 Deploy In-Tree Kernel Modules (HD3SS3220, WM8904, OV5640, etc.)
+
+Sau khi build `virtual/kernel`, các module in-tree (được enable bằng `.cfg`) sẽ nằm trong kernel build tree. Có 3 cách deploy:
+
+**Cách 1: SCP module trực tiếp (nhanh nhất - ~30 giây)**
+
+```bash
+BOARD_IP=192.168.1.100
+KVER=$(ssh root@${BOARD_IP} "uname -r")
+
+# Tìm module trong kernel build tree
+# Ví dụ: HD3SS3220 USB Type-C driver
+# Đường dẫn thực tế sau khi build: image/usr/lib/modules/<KVER>/kernel/drivers/usb/typec/
+MODULE_PATH=$(find toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/ \
+              -path "*/image/usr/lib/modules/${KVER}/kernel/drivers/usb/typec/hd3ss3220.ko" | head -1)
+
+# Hoặc dùng đường dẫn trực tiếp (thay <version> bằng version thực tế)
+# MODULE_PATH="toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/6.6.94+git/image/usr/lib/modules/${KVER}/kernel/drivers/usb/typec/hd3ss3220.ko"
+
+# Gửi lên board
+scp ${MODULE_PATH} root@${BOARD_IP}:~
+
+# Load module trên board
+ssh root@${BOARD_IP} "insmod ~/hd3ss3220.ko"
+ssh root@${BOARD_IP} "dmesg | tail -20"
+```
+
+**Cách 2: Update IPK package (trung bình - ~3 phút)**
+
+```bash
+# Tạo IPK package cho kernel modules
+bitbake virtual/kernel -c package
+
+# Tìm IPK file (đường dẫn thực tế trong work directory)
+IPK_PATH=$(find toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/ \
+           -path "*/deploy-ipks/verdin_imx8mp/kernel-module-hd3ss3220*.ipk" | head -1)
+
+# Hoặc dùng đường dẫn trực tiếp
+# IPK_PATH="toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/6.6.94+git/deploy-ipks/verdin_imx8mp/kernel-module-hd3ss3220-*.ipk"
+
+# Gửi lên board và cài đặt
+scp ${IPK_PATH} root@${BOARD_IP}:/tmp/
+ssh root@${BOARD_IP} "opkg install --force-reinstall /tmp/$(basename ${IPK_PATH})"
+ssh root@${BOARD_IP} "modprobe hd3ss3220"
+```
+
+**Cách 3: Flash toàn bộ image (chậm nhất - ~10 phút)**
+
+```bash
+# Build image hoàn chỉnh
+bitbake access-control
+
+# Flash lên board (xem CLAUDE.md để biết cách flash)
+```
+
+**So sánh:**
+
+| Phương pháp | Thời gian | Cần reboot | Phù hợp |
+|---|---|---|---|
+| SCP module | ~30s | Không | Development/debug nhanh |
+| Update IPK | ~3 phút | Không | Test trước khi release |
+| Flash image | ~10 phút | Có | Production deployment |
+
+**Ví dụ với các module khác:**
+
+```bash
+# WM8904 audio codec
+MODULE_PATH=$(find toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/ \
+              -path "*/image/usr/lib/modules/${KVER}/kernel/sound/soc/codecs/snd-soc-wm8904.ko" | head -1)
+scp ${MODULE_PATH} root@${BOARD_IP}:/tmp/
+ssh root@${BOARD_IP} "insmod /tmp/snd-soc-wm8904.ko"
+
+# OV5640 camera sensor
+MODULE_PATH=$(find toradex-bsp/build/tmp/work/verdin_imx8mp-tdx-linux/linux-toradex/ \
+              -path "*/image/usr/lib/modules/${KVER}/kernel/drivers/media/i2c/ov5640.ko" | head -1)
+scp ${MODULE_PATH} root@${BOARD_IP}:/tmp/
+ssh root@${BOARD_IP} "insmod /tmp/ov5640.ko"
+```
+
 ---
 
 ## Workflow B — Out-of-tree thủ công (phát triển nhanh)
@@ -136,7 +221,7 @@ KERNEL_SRC=~/Toradex_iMX8M-/toradex-bsp/build/tmp/work-shared/verdin-imx8mp/kern
 
 ### B.2 Build Device Tree Overlay (.dtbo)
 
-Các overlay trong layer này dùng `#include` (ví dụ [`verdin-imx8mp_sr602_overlay.dts`](../recipes-bsp/device-tree/device-tree-overlays/verdin-imx8mp_sr602_overlay.dts) include `imx8mp-pinfunc.h`), nên cần chạy C preprocessor trước `dtc`.
+Các overlay trong layer này dùng `#include` (ví dụ [`verdin-imx8mp_sr602_overlay.dts`](../../recipes-bsp/device-tree/device-tree-overlays/verdin-imx8mp_sr602_overlay.dts) include `imx8mp-pinfunc.h`), nên cần chạy C preprocessor trước `dtc`.
 
 **Biên dịch thủ công:**
 
@@ -161,7 +246,7 @@ dtc -@ -I dts -O dtb \
 
 **Makefile tự động — build tất cả overlay:**
 
-Tạo file [`scripts/build-overlays.mk`](../scripts/build-overlays.mk):
+Tạo file `scripts/build-overlays.mk` (chưa tồn tại - cần tạo):
 
 ```makefile
 # scripts/build-overlays.mk
@@ -230,7 +315,7 @@ make -C ${KERNEL_SRC} M=$(pwd) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modul
 
 **Makefile tự động — build tất cả module:**
 
-Tạo file [`scripts/build-modules.mk`](../scripts/build-modules.mk):
+Tạo file `scripts/build-modules.mk` (chưa tồn tại - cần tạo):
 
 ```makefile
 # scripts/build-modules.mk
@@ -274,7 +359,7 @@ make -f scripts/build-modules.mk
 
 ### B.4 Deploy lên board qua SCP
 
-Tạo file [`scripts/deploy.sh`](../scripts/deploy.sh):
+Tạo file `scripts/deploy.sh` (chưa tồn tại - cần tạo):
 
 ```bash
 #!/bin/bash
@@ -363,7 +448,7 @@ rmmod stmvl53l5cx
 
 **Script test tự động trên board:**
 
-Tạo file [`scripts/board-test.sh`](../scripts/board-test.sh) (copy lên board rồi chạy):
+Tạo file `scripts/board-test.sh` (chưa tồn tại - cần tạo, sau đó copy lên board):
 
 ```bash
 #!/bin/bash
@@ -448,15 +533,15 @@ ssh root@192.168.1.100 "bash /tmp/board-test.sh sr602"
 | Module không probe | Kiểm tra overlay đã `applied` trước khi `insmod` |
 | `vermagic mismatch` | Phải dùng đúng kernel source khớp với kernel đang chạy trên board (`uname -r`) |
 | I2C4 có 5 thiết bị | Nếu probe lỗi, kiểm tra pull-up resistor và bus capacitance |
-| SR602 xung đột PWM2 | Overlay [`verdin-imx8mp_sr602_overlay.dts`](../recipes-bsp/device-tree/device-tree-overlays/verdin-imx8mp_sr602_overlay.dts) đã disable `pwm2` tự động |
+| SR602 xung đột PWM2 | Overlay [`verdin-imx8mp_sr602_overlay.dts`](../../recipes-bsp/device-tree/device-tree-overlays/verdin-imx8mp_sr602_overlay.dts) đã disable `pwm2` tự động |
 
 ---
 
 ## Tham khảo
 
-- [`recipes-kernel/sr602-mod/files/sr602_mod.c`](../recipes-kernel/sr602-mod/files/sr602_mod.c) — Driver SR602 PIR
-- [`recipes-kernel/stmvl53l5cx/files/kernel/`](../recipes-kernel/stmvl53l5cx/files/kernel/) — Driver VL53L5CX
-- [`recipes-bsp/device-tree/device-tree-overlays/`](../recipes-bsp/device-tree/device-tree-overlays/) — Tất cả DTS overlay
-- [`CLAUDE.md`](../CLAUDE.md) — Tổng quan layer và pin mapping
+- [`recipes-kernel/sr602-mod/files/sr602_mod.c`](../../recipes-kernel/sr602-mod/files/sr602_mod.c) — Driver SR602 PIR
+- [`recipes-kernel/stmvl53l5cx/files/kernel/`](../../recipes-kernel/stmvl53l5cx/files/kernel/) — Driver VL53L5CX
+- [`recipes-bsp/device-tree/device-tree-overlays/`](../../recipes-bsp/device-tree/device-tree-overlays/) — Tất cả DTS overlay
+- [`CLAUDE.md`](../../CLAUDE.md) — Tổng quan layer và pin mapping
 - [Toradex Device Tree Overlays](https://developer.toradex.com/linux-bsp/application-development/device-tree-overlays-on-toradex-modules/)
 - [Kernel configfs overlays](https://www.kernel.org/doc/html/latest/devicetree/configfs-overlays.html)
