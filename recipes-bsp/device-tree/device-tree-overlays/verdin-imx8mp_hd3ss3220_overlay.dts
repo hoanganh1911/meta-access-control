@@ -13,11 +13,11 @@
             #address-cells = <1>;
             #size-cells = <0>;
 
-            typec@47 {
+            hd3ss3220: typec@47 {
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
-                /* Khai báo nó là một role switch */
+                /* Dòng này bắt buộc phải có để tạo file 'role' */
                 usb-role-switch;
 
                 connector {
@@ -26,7 +26,7 @@
                     data-role = "dual";
                     power-role = "dual";
                     try-power-role = "sink";
-                    
+
                     ports {
                         #address-cells = <1>;
                         #size-cells = <0>;
@@ -42,17 +42,20 @@
         };
     };
 
-    /* Cấu hình USB Controller dùng đường dẫn tuyệt đối để đảm bảo chính xác */
     fragment@1 {
-        target-path = "/soc@0/usb@32f10108/usb@38200000";
+        target = <&usb3_1>;
         __overlay__ {
             status = "okay";
-            dr_mode = "otg";
-            usb-role-switch;
-            /* Buộc nó phải nhận node typec@47 làm switch */
-            port {
-                dwc3_0_endpoint: endpoint {
-                    remote-endpoint = <&usb_con_endpoint>;
+
+            usb@38200000 {
+                status = "okay";
+                dr_mode = "otg";
+                usb-role-switch;
+                
+                port {
+                    dwc3_0_endpoint: endpoint {
+                        remote-endpoint = <&usb_con_endpoint>;
+                    };
                 };
             };
         };
