@@ -19,7 +19,7 @@
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
-                usb-role-switch;  
+
                 connector {
                     compatible = "usb-c-connector";
                     label = "USB-C-SS";
@@ -31,7 +31,7 @@
                      * để tránh lỗi NOTFOUND khi symbols bị thiếu. 
                      * Thay vào đó, ta sẽ dựa vào việc dwc3 core đã có vbus.
                      */
-
+                    usb-role-switch;  
                     ports {
                         #address-cells = <1>;
                         #size-cells = <0>;
