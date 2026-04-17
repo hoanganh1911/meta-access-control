@@ -63,9 +63,18 @@ int main() {
         return 1;
     }
 
-    printf("Waiting for data...\n");
+    printf("Waiting for data (sending 0x55 trigger)...\n");
 
     while (1) {
+        // Send trigger byte 0x55
+        unsigned char trigger = 0x55;
+        if (write(fd, &trigger, 1) < 0) {
+            perror("write error");
+        }
+        
+        // Wait a bit for the sensor to compute and reply
+        usleep(100000); // 100ms
+
         // Look for the start byte 0xFF
         unsigned char start_byte;
         if (read(fd, &start_byte, 1) > 0) {
@@ -95,6 +104,9 @@ int main() {
                 }
             }
         }
+        
+        // Sleep before the next trigger to avoid spamming the sensor
+        usleep(400000); // 400ms
     }
 
     close(fd);
