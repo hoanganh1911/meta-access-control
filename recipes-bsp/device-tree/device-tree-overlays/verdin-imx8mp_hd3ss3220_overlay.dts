@@ -19,7 +19,7 @@
                 compatible = "ti,hd3ss3220";
                 reg = <0x47>;
                 status = "okay";
-
+                usb-role-switch;  
                 connector {
                     compatible = "usb-c-connector";
                     label = "USB-C-SS";
