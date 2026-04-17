@@ -8,23 +8,23 @@
     compatible = "toradex,verdin-imx8mp";
 
     /* 
-     * Cấu hình lại regulator có sẵn của Verdin để điều khiển SODIMM 185 (USB_2_EN)
-     * Schematic cho thấy U8 là AP2151 (Active-High). 
+     * Ghi đè trực tiếp lên Regulator điều khiển nguồn USB (SODIMM 185)
+     * Dùng target-path để tránh lỗi NOTFOUND trong U-Boot.
      */
     fragment@0 {
-
-        target = <&reg_usb2_vbus>;
+        target-path = "/regulators/regulator-usb2-vbus";
         __overlay__ {
             status = "okay";
-            gpio = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+            gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
             enable-active-high;
             regulator-min-microvolt = <5000000>;
             regulator-max-microvolt = <5000000>;
         };
     };
 
+    /* Cấu hình chip HD3SS3220 trên bus I2C4 (Bus 3 trong Linux) */
     fragment@1 {
-        target = <&i2c4>;
+        target-path = "/soc@0/bus@30800000/i2c@30a50000";
         __overlay__ {
             status = "okay";
 
@@ -39,6 +39,7 @@
                     data-role = "dual";
                     power-role = "dual";
                     try-power-role = "sink";
+                    /* Tham chiếu đến regulator đã sửa ở trên thông qua nhãn nội bộ */
                     vbus-supply = <&reg_usb2_vbus>;
 
                     ports {
@@ -56,11 +57,24 @@
         };
     };
 
+    /* Kích hoạt USB Role Switch trên USB2 Controller */
     fragment@2 {
-        target = <&usb3_1>;
+        target-path = "/soc@0/usb@32f10108";
         __overlay__ {
             status = "okay";
             usb-role-switch;
+            /* Phá vỡ vòng lặp dependency bằng cách không khai báo endpoint ngược lại ở đây */
+        };
+    };
+
+    /* Cấu hình lớp DWC3 core */
+    fragment@3 {
+        target-path = "/soc@0/usb@32f10108/usb@38200000";
+        __overlay__ {
+            dr_mode = "otg";
+            usb-role-switch;
+            vbus-supply = <&reg_usb2_vbus>;
+            
             port {
                 usb3_1_endpoint: endpoint {
                     remote-endpoint = <&usb_con_endpoint>;
@@ -69,14 +83,11 @@
         };
     };
 
-    fragment@3 {
-        target = <&usb_dwc3_1>;
-        __overlay__ {
-            dr_mode = "otg";
-            usb-role-switch;
-            /* Cần gán vbus cho cả controller để nó biết khi nào có nguồn */
-            vbus-supply = <&reg_usb2_vbus>;
-        };
+    /* 
+     * Tạo nhãn nội bộ (phạm vi trong overlay) để tham chiếu chéo giữa các fragment.
+     * U-Boot không cần biết nhãn này vì nó được bộ biên dịch dtc xử lý nội bộ.
+     */
+    __symbols__ {
+        reg_usb2_vbus = "/regulators/regulator-usb2-vbus";
     };
 };
-
