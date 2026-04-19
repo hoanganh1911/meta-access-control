@@ -2,48 +2,29 @@
 /plugin/;
 
 #include "imx8mp-pinfunc.h"
-#include <dt-bindings/gpio/gpio.h>
 
 / {
     compatible = "toradex,verdin-imx8mp";
 
     fragment@0 {
-        target-path = "/";
-        __overlay__ {
-            rcwl1670 {
-                compatible = "devantech,srf04";
-                pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_rcwl1670>;
-                trig-gpios = <&gpio5 23 GPIO_ACTIVE_HIGH>;
-                echo-gpios = <&gpio5 25 GPIO_ACTIVE_HIGH>;
-                status = "okay";
-            };
-        };
-    };
-
-    fragment@1 {
         target = <&iomuxc>;
         __overlay__ {
-            pinctrl_rcwl1670: rcwl1670grp {
+            pinctrl_uart2_rcwl1670: uart2rcwl1670grp {
                 fsl,pins = <
-                    MX8MP_IOMUXC_UART1_TXD__GPIO5_IO23 0x146
-                    MX8MP_IOMUXC_UART2_TXD__GPIO5_IO25 0x146
+                    MX8MP_IOMUXC_UART2_RXD__UART2_DCE_RX    0x140
+                    MX8MP_IOMUXC_UART2_TXD__UART2_DCE_TX    0x140
                 >;
             };
         };
     };
 
-    fragment@2 {
-        target = <&uart1>;
-        __overlay__ {
-            status = "disabled";
-        };
-    };
-
-    fragment@3 {
+    fragment@1 {
         target = <&uart2>;
         __overlay__ {
-            status = "disabled";
+            pinctrl-names = "default";
+            pinctrl-0 = <&pinctrl_uart2_rcwl1670>;
+            /delete-property/ uart-has-rtscts;
+            status = "okay";
         };
     };
 };
