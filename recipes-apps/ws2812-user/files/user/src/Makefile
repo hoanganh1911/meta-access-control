@@ -5,7 +5,7 @@ SRC = main.c
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(SRC) -lgpiod
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(SRC)
 
 clean:
 	rm -f $(TARGET)

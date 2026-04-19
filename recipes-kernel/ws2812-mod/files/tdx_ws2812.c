@@ -19,20 +19,22 @@ struct ws2812_data {
     int num_leds;
 };
 
-/* 
- * BẢN FIX CỰC ĐOAN (STRETCHED INVERTED LOGIC)
- * Bù thêm hẳn 500ns cho thời gian Rise Time siêu chậm của trở 10K.
+/*
+ * Inverted logic: MOSFET AOD2408 open-drain with 10K pull-up.
+ * GPIO=0 -> MOSFET OFF -> pull-up -> DIN HIGH
+ * GPIO=1 -> MOSFET ON  -> drain LOW -> DIN LOW
+ * Timing stretched to compensate slow rise time of 10K pull-up.
  */
-#define T0H 850  // Chờ LED nhận đủ 350ns
-#define T0L 250  
-#define T1H 1250 // Chờ LED nhận đủ 750ns
-#define T1L 250
+#define T0H 600
+#define T0L 600
+#define T1H 1000
+#define T1L 350
 
 static void ws2812_send_byte(struct gpio_desc *gpio, u8 byte) {
     int i;
     for (i = 7; i >= 0; i--) {
         if (byte & (1 << i)) {
-            gpiod_set_raw_value(gpio, 0); 
+            gpiod_set_raw_value(gpio, 0);
             ndelay(T1H);
             gpiod_set_raw_value(gpio, 1);
             ndelay(T1L);
