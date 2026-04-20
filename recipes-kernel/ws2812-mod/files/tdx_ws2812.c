@@ -24,36 +24,42 @@ struct ws2812_data {
  * GPIO=0 -> MOSFET OFF -> pull-up -> DIN HIGH
  * GPIO=1 -> MOSFET ON  -> drain LOW -> DIN LOW
  *
- * Timing targets (WS2812B spec, accounting for ~150ns gpiod_set_raw_value overhead):
- *   Bit-0: T0H_actual = T0H_ns + overhead ≈ 400ns, T0L_actual ≈ 900ns
- *   Bit-1: T1H_actual = T1H_ns + overhead ≈ 800ns, T1L_actual ≈ 600ns
+ * ROOT CAUSE ANALYSIS: With 10KΩ pull-up and ~50pF trace capacitance,
+ * τ = R×C = 10000 × 50e-12 = 500ns. The DIN signal crosses WS2812 Vih
+ * threshold (~3.5V) only after ~600ns (= -τ × ln(1 - 3.5/5)).
  *
- * KEY BUG FIXED: original T0H == T0L = 600ns → 50% duty, WS2812 cannot
- * distinguish bit-0 from bit-1. Now T0H << T0L and T1H > T0H.
+ * Sub-microsecond HIGH pulses (ndelay approach) are INVISIBLE to the LED:
+ *   T0H=250ns → DIN reaches only 1.97V (below 3.5V Vih) → WS2812 sees nothing!
  *
- * local_irq_save() in ws2812_update ensures ndelay accuracy.
+ * FIX: Use slow udelay timing so RC circuit has time to charge fully:
+ *   T0H=2µs  → DIN reaches 4.91V (well above 3.5V) ✓
+ *   T1H=6µs  → clearly distinguishable from T0H (3:1 ratio) ✓
+ *   T0L=10µs, T1L=2µs → both well under 50µs WS2812 reset threshold ✓
+ *
+ * NOTE: If this works, permanent fix is replacing 10KΩ pull-up with 1KΩ
+ * to allow normal 800kHz WS2812 timing (τ = 50ns, Vih at ~60ns).
  */
-#define T0H_NS  250  /* ndelay for bit-0 HIGH: 250ns + ~150ns overhead = ~400ns */
-#define T0L_NS  750  /* ndelay for bit-0 LOW:  750ns + ~150ns overhead = ~900ns */
-#define T1H_NS  650  /* ndelay for bit-1 HIGH: 650ns + ~150ns overhead = ~800ns */
-#define T1L_NS  450  /* ndelay for bit-1 LOW:  450ns + ~150ns overhead = ~600ns */
+#define T0H_US  2   /* 2µs HIGH for bit-0 → RC charges to ~4.9V */
+#define T0L_US  10  /* 10µs LOW for bit-0  → clearly LOW, < 50µs reset */
+#define T1H_US  6   /* 6µs HIGH for bit-1  → 3× T0H, unmistakable */
+#define T1L_US  2   /* 2µs LOW for bit-1 */
 
 static inline void ws2812_send_byte(struct gpio_desc *gpio, u8 byte)
 {
     int i;
     for (i = 7; i >= 0; i--) {
         if (byte & (1 << i)) {
-            /* Bit 1: T1H HIGH (~800ns), T1L LOW (~600ns) */
+            /* Bit 1: long HIGH (6µs), short LOW (2µs) */
             gpiod_set_raw_value(gpio, 0); /* → DIN HIGH */
-            ndelay(T1H_NS);
+            udelay(T1H_US);
             gpiod_set_raw_value(gpio, 1); /* → DIN LOW  */
-            ndelay(T1L_NS);
+            udelay(T1L_US);
         } else {
-            /* Bit 0: T0H HIGH (~400ns), T0L LOW (~900ns) */
+            /* Bit 0: short HIGH (2µs), long LOW (10µs) */
             gpiod_set_raw_value(gpio, 0); /* → DIN HIGH */
-            ndelay(T0H_NS);
+            udelay(T0H_US);
             gpiod_set_raw_value(gpio, 1); /* → DIN LOW  */
-            ndelay(T0L_NS);
+            udelay(T0L_US);
         }
     }
 }
