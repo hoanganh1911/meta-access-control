@@ -4,7 +4,7 @@
 #include <time.h>
 #include <gpiod.h>
 
-#define GPIO_CHIP       "gpiochip4"
+#define GPIO_CHIP       "/dev/gpiochip4"
 #define GPIO_TRIG       25
 #define GPIO_ECHO       24
 
@@ -21,25 +21,26 @@ static long timespec_diff_us(struct timespec *start, struct timespec *end)
            (end->tv_nsec - start->tv_nsec) / 1000L;
 }
 
-static long measure_once(struct gpiod_line *trig, struct gpiod_line *echo)
+static long measure_once(struct gpiod_line_request *trig_req,
+                         struct gpiod_line_request *echo_req)
 {
     struct timespec ts_start, ts_now;
 
-    gpiod_line_set_value(trig, 0);
+    gpiod_line_request_set_value(trig_req, GPIO_TRIG, GPIOD_LINE_VALUE_INACTIVE);
     usleep(2);
-    gpiod_line_set_value(trig, 1);
+    gpiod_line_request_set_value(trig_req, GPIO_TRIG, GPIOD_LINE_VALUE_ACTIVE);
     usleep(10);
-    gpiod_line_set_value(trig, 0);
+    gpiod_line_request_set_value(trig_req, GPIO_TRIG, GPIOD_LINE_VALUE_INACTIVE);
 
     clock_gettime(CLOCK_MONOTONIC, &ts_start);
-    while (gpiod_line_get_value(echo) == 0) {
+    while (gpiod_line_request_get_value(echo_req, GPIO_ECHO) == GPIOD_LINE_VALUE_INACTIVE) {
         clock_gettime(CLOCK_MONOTONIC, &ts_now);
         if (timespec_diff_us(&ts_start, &ts_now) > TIMEOUT_US)
             return -1;
     }
 
     clock_gettime(CLOCK_MONOTONIC, &ts_start);
-    while (gpiod_line_get_value(echo) == 1) {
+    while (gpiod_line_request_get_value(echo_req, GPIO_ECHO) == GPIOD_LINE_VALUE_ACTIVE) {
         clock_gettime(CLOCK_MONOTONIC, &ts_now);
         if (timespec_diff_us(&ts_start, &ts_now) > TIMEOUT_US)
             return -1;
@@ -52,34 +53,66 @@ static long measure_once(struct gpiod_line *trig, struct gpiod_line *echo)
 int main(void)
 {
     struct gpiod_chip *chip;
-    struct gpiod_line *trig, *echo;
+    struct gpiod_line_settings *settings;
+    struct gpiod_line_config *line_cfg;
+    struct gpiod_request_config *req_cfg;
+    struct gpiod_line_request *trig_req, *echo_req;
+    unsigned int offset;
     int i, valid;
     long duration_us, sum_us;
     float distance_cm, water_level;
 
     printf("RCWL-1670 Water Level Monitor\n");
 
-    chip = gpiod_chip_open_by_name(GPIO_CHIP);
+    chip = gpiod_chip_open(GPIO_CHIP);
     if (!chip) {
-        perror("gpiod_chip_open_by_name");
+        perror("gpiod_chip_open");
         return 1;
     }
 
-    trig = gpiod_chip_get_line(chip, GPIO_TRIG);
-    echo = gpiod_chip_get_line(chip, GPIO_ECHO);
-    if (!trig || !echo) {
-        fprintf(stderr, "Failed to get GPIO lines\n");
+    req_cfg = gpiod_request_config_new();
+    if (!req_cfg) {
+        fprintf(stderr, "gpiod_request_config_new failed\n");
+        gpiod_chip_close(chip);
+        return 1;
+    }
+    gpiod_request_config_set_consumer(req_cfg, "rcwl1670");
+
+    /* --- setup TRIG as output --- */
+    settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+
+    line_cfg = gpiod_line_config_new();
+    offset = GPIO_TRIG;
+    gpiod_line_config_add_line_settings(line_cfg, &offset, 1, settings);
+
+    trig_req = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
+    gpiod_line_config_free(line_cfg);
+    gpiod_line_settings_free(settings);
+
+    if (!trig_req) {
+        perror("request trig");
+        gpiod_request_config_free(req_cfg);
         gpiod_chip_close(chip);
         return 1;
     }
 
-    if (gpiod_line_request_output(trig, "rcwl1670-trig", 0) < 0) {
-        perror("request trig output");
-        gpiod_chip_close(chip);
-        return 1;
-    }
-    if (gpiod_line_request_input(echo, "rcwl1670-echo") < 0) {
-        perror("request echo input");
+    /* --- setup ECHO as input --- */
+    settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
+
+    line_cfg = gpiod_line_config_new();
+    offset = GPIO_ECHO;
+    gpiod_line_config_add_line_settings(line_cfg, &offset, 1, settings);
+
+    echo_req = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
+    gpiod_line_config_free(line_cfg);
+    gpiod_line_settings_free(settings);
+    gpiod_request_config_free(req_cfg);
+
+    if (!echo_req) {
+        perror("request echo");
+        gpiod_line_request_release(trig_req);
         gpiod_chip_close(chip);
         return 1;
     }
@@ -89,7 +122,7 @@ int main(void)
         valid = 0;
 
         for (i = 0; i < SAMPLE_COUNT; i++) {
-            duration_us = measure_once(trig, echo);
+            duration_us = measure_once(trig_req, echo_req);
             if (duration_us > 0) {
                 sum_us += duration_us;
                 valid++;
@@ -120,8 +153,8 @@ int main(void)
         usleep(LOOP_DELAY_MS * 1000);
     }
 
-    gpiod_line_release(trig);
-    gpiod_line_release(echo);
+    gpiod_line_request_release(trig_req);
+    gpiod_line_request_release(echo_req);
     gpiod_chip_close(chip);
     return 0;
 }
