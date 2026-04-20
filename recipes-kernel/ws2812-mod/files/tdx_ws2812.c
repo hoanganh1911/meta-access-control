@@ -39,10 +39,10 @@ struct ws2812_data {
  * NOTE: If this works, permanent fix is replacing 10KΩ pull-up with 1KΩ
  * to allow normal 800kHz WS2812 timing (τ = 50ns, Vih at ~60ns).
  */
-#define T0H_US  1   /* 1µs HIGH for bit-0 → WS2812 sees 1000-600 = 400ns → bit-0 ✓ */
-#define T0L_US  3   /* 3µs LOW  for bit-0 */
-#define T1H_US  2   /* 2µs HIGH for bit-1 → WS2812 sees 2000-600 = 1400ns → bit-1 ✓ */
-#define T1L_US  1   /* 1µs LOW  for bit-1 */
+#define T0H_US  3   /* 3µs HIGH for bit-0: DIN reaches ~4.85V, WS2812 sees ~2.4µs effective */
+#define T0L_US  10  /* 10µs LOW for bit-0: plenty of time for MOSFET to pull low */
+#define T1H_US  8   /* 8µs HIGH for bit-1: DIN fully charged, WS2812 sees ~7.4µs effective */
+#define T1L_US  3   /* 3µs LOW  for bit-1 */
 
 static inline void ws2812_send_byte(struct gpio_desc *gpio, u8 byte)
 {

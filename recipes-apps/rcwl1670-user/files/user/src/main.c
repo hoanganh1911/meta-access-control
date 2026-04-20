@@ -1,114 +1,127 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <errno.h>
+#include <time.h>
+#include <gpiod.h>
 
-#define SERIAL_PORT "/dev/ttymxc1" // UART2 on Verdin i.MX8MP
-#define BAUD_RATE B9600
+#define GPIO_CHIP       "gpiochip4"
+#define GPIO_TRIG       25
+#define GPIO_ECHO       24
 
-/**
- * Configure the serial port
- */
-int setup_serial(int fd) {
-    struct termios tty;
+#define TANK_HEIGHT_CM  20.0f
+#define MIN_DISTANCE_CM  1.0f
+#define SAMPLE_COUNT    30
+#define TIMEOUT_US      30000
+#define SAMPLE_DELAY_MS 10
+#define LOOP_DELAY_MS   500
 
-    if (tcgetattr(fd, &tty) != 0) {
-        perror("tcgetattr");
-        return -1;
-    }
-
-    cfsetospeed(&tty, BAUD_RATE);
-    cfsetispeed(&tty, BAUD_RATE);
-
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit chars
-    tty.c_iflag &= ~IGNBRK;                     // disable break processing
-    tty.c_lflag = 0;                            // no signaling chars, no echo, no canonical processing
-    tty.c_oflag = 0;                            // no remapping, no delays
-    tty.c_cc[VMIN]  = 1;                        // read blocks until 1 character is available
-    tty.c_cc[VTIME] = 5;                        // 0.5 seconds read timeout
-
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);     // shut off xon/xoff ctrl
-    tty.c_cflag |= (CLOCAL | CREAD);            // ignore modem controls, enable reading
-    tty.c_cflag &= ~(PARENB | PARODD);          // shut off parity
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        perror("tcsetattr");
-        return -1;
-    }
-
-    return 0;
+static long timespec_diff_us(struct timespec *start, struct timespec *end)
+{
+    return (end->tv_sec - start->tv_sec) * 1000000L +
+           (end->tv_nsec - start->tv_nsec) / 1000L;
 }
 
-int main() {
-    int fd;
-    unsigned char buf[4];
-    int bytes_read;
+static long measure_once(struct gpiod_line *trig, struct gpiod_line *echo)
+{
+    struct timespec ts_start, ts_now;
 
-    printf("RCWL-1670 Ultrasonic Sensor Test\n");
-    printf("Opening %s at 9600 baud...\n", SERIAL_PORT);
+    gpiod_line_set_value(trig, 0);
+    usleep(2);
+    gpiod_line_set_value(trig, 1);
+    usleep(10);
+    gpiod_line_set_value(trig, 0);
 
-    fd = open(SERIAL_PORT, O_RDWR | O_NOCTTY | O_SYNC);
-    if (fd < 0) {
-        fprintf(stderr, "Error opening %s: %s\n", SERIAL_PORT, strerror(errno));
+    clock_gettime(CLOCK_MONOTONIC, &ts_start);
+    while (gpiod_line_get_value(echo) == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &ts_now);
+        if (timespec_diff_us(&ts_start, &ts_now) > TIMEOUT_US)
+            return -1;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &ts_start);
+    while (gpiod_line_get_value(echo) == 1) {
+        clock_gettime(CLOCK_MONOTONIC, &ts_now);
+        if (timespec_diff_us(&ts_start, &ts_now) > TIMEOUT_US)
+            return -1;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
+    return timespec_diff_us(&ts_start, &ts_now);
+}
+
+int main(void)
+{
+    struct gpiod_chip *chip;
+    struct gpiod_line *trig, *echo;
+    int i, valid;
+    long duration_us, sum_us;
+    float distance_cm, water_level;
+
+    printf("RCWL-1670 Water Level Monitor\n");
+
+    chip = gpiod_chip_open_by_name(GPIO_CHIP);
+    if (!chip) {
+        perror("gpiod_chip_open_by_name");
         return 1;
     }
 
-    if (setup_serial(fd) < 0) {
-        close(fd);
+    trig = gpiod_chip_get_line(chip, GPIO_TRIG);
+    echo = gpiod_chip_get_line(chip, GPIO_ECHO);
+    if (!trig || !echo) {
+        fprintf(stderr, "Failed to get GPIO lines\n");
+        gpiod_chip_close(chip);
         return 1;
     }
 
-    printf("Waiting for data (sending 0x55 trigger)...\n");
+    if (gpiod_line_request_output(trig, "rcwl1670-trig", 0) < 0) {
+        perror("request trig output");
+        gpiod_chip_close(chip);
+        return 1;
+    }
+    if (gpiod_line_request_input(echo, "rcwl1670-echo") < 0) {
+        perror("request echo input");
+        gpiod_chip_close(chip);
+        return 1;
+    }
 
     while (1) {
-        // Send trigger byte 0x55
-        unsigned char trigger = 0x55;
-        if (write(fd, &trigger, 1) < 0) {
-            perror("write error");
-        }
-        
-        // Wait a bit for the sensor to compute and reply
-        usleep(100000); // 100ms
+        sum_us = 0;
+        valid = 0;
 
-        // Look for the start byte 0xFF
-        unsigned char start_byte;
-        if (read(fd, &start_byte, 1) > 0) {
-            if (start_byte == 0xFF) {
-                buf[0] = start_byte;
-                
-                // Read the next 3 bytes (Data_H, Data_L, Checksum)
-                int extra = 0;
-                while (extra < 3) {
-                    int n = read(fd, &buf[1 + extra], 3 - extra);
-                    if (n > 0) {
-                        extra += n;
-                    } else if (n < 0) {
-                        perror("read error");
-                        break;
-                    }
-                }
-
-                if (extra == 3) {
-                    unsigned char checksum = (buf[0] + buf[1] + buf[2]) & 0xFF;
-                    if (checksum == buf[3]) {
-                        int distance = (buf[1] << 8) | buf[2];
-                        printf("Distance: %d mm\n", distance);
-                    } else {
-                        printf("Checksum error: expected 0x%02X, got 0x%02X\n", checksum, buf[3]);
-                    }
-                }
+        for (i = 0; i < SAMPLE_COUNT; i++) {
+            duration_us = measure_once(trig, echo);
+            if (duration_us > 0) {
+                sum_us += duration_us;
+                valid++;
             }
+            usleep(SAMPLE_DELAY_MS * 1000);
         }
-        
-        // Sleep before the next trigger to avoid spamming the sensor
-        usleep(400000); // 400ms
+
+        printf("-------------------------\n");
+
+        if (valid == 0) {
+            printf("No valid samples received\n");
+            usleep(LOOP_DELAY_MS * 1000);
+            continue;
+        }
+
+        distance_cm = (sum_us / (float)valid) * 0.0343f / 2.0f;
+
+        if (distance_cm < MIN_DISTANCE_CM)
+            distance_cm = MIN_DISTANCE_CM;
+
+        water_level = ((TANK_HEIGHT_CM - distance_cm) / TANK_HEIGHT_CM) * 100.0f;
+        if (water_level < 0.0f)   water_level = 0.0f;
+        if (water_level > 100.0f) water_level = 100.0f;
+
+        printf("Distance:    %.2f cm  (%d/%d samples)\n", distance_cm, valid, SAMPLE_COUNT);
+        printf("Water Level: %.1f %%\n", water_level);
+
+        usleep(LOOP_DELAY_MS * 1000);
     }
 
-    close(fd);
+    gpiod_line_release(trig);
+    gpiod_line_release(echo);
+    gpiod_chip_close(chip);
     return 0;
 }
