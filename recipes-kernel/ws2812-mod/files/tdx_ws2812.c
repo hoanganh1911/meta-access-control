@@ -24,40 +24,36 @@ struct ws2812_data {
  * GPIO=0 -> MOSFET OFF -> pull-up -> DIN HIGH
  * GPIO=1 -> MOSFET ON  -> drain LOW -> DIN LOW
  *
- * ndelay() on non-RT Linux kernel cannot guarantee sub-microsecond precision.
- * Minimum granularity is typically ~1µs. We use udelay() with integer
- * microseconds and accept that bit-rate will be slower (~200kHz instead of
- * 800kHz). WS2812B tolerates longer LOW periods; total bit time ≤ ~9µs is
- * within the spec's undefined range but works in practice when timing ratio
- * is correct. If LEDs still don't respond, use the SPI method instead.
+ * Timing targets (WS2812B spec, accounting for ~150ns gpiod_set_raw_value overhead):
+ *   Bit-0: T0H_actual = T0H_ns + overhead ≈ 400ns, T0L_actual ≈ 900ns
+ *   Bit-1: T1H_actual = T1H_ns + overhead ≈ 800ns, T1L_actual ≈ 600ns
  *
- * Timing (µs) for inverted MOSFET:
- *   Bit-1: GPIO=0 (HIGH) for T1H µs, then GPIO=1 (LOW) for T1L µs
- *   Bit-0: GPIO=0 (HIGH) for T0H µs, then GPIO=1 (LOW) for T0L µs
+ * KEY BUG FIXED: original T0H == T0L = 600ns → 50% duty, WS2812 cannot
+ * distinguish bit-0 from bit-1. Now T0H << T0L and T1H > T0H.
  *
- * Ratio T1H:T0H ≈ 2:1 is the key requirement for WS2812.
+ * local_irq_save() in ws2812_update ensures ndelay accuracy.
  */
-#define T0H_US  1   /* HIGH pulse for bit-0: ~1µs  */
-#define T0L_US  3   /* LOW  pulse for bit-0: ~3µs  */
-#define T1H_US  2   /* HIGH pulse for bit-1: ~2µs  */
-#define T1L_US  1   /* LOW  pulse for bit-1: ~1µs  */
+#define T0H_NS  250  /* ndelay for bit-0 HIGH: 250ns + ~150ns overhead = ~400ns */
+#define T0L_NS  750  /* ndelay for bit-0 LOW:  750ns + ~150ns overhead = ~900ns */
+#define T1H_NS  650  /* ndelay for bit-1 HIGH: 650ns + ~150ns overhead = ~800ns */
+#define T1L_NS  450  /* ndelay for bit-1 LOW:  450ns + ~150ns overhead = ~600ns */
 
 static inline void ws2812_send_byte(struct gpio_desc *gpio, u8 byte)
 {
     int i;
     for (i = 7; i >= 0; i--) {
         if (byte & (1 << i)) {
-            /* Bit 1: long HIGH, short LOW */
+            /* Bit 1: T1H HIGH (~800ns), T1L LOW (~600ns) */
             gpiod_set_raw_value(gpio, 0); /* → DIN HIGH */
-            udelay(T1H_US);
+            ndelay(T1H_NS);
             gpiod_set_raw_value(gpio, 1); /* → DIN LOW  */
-            udelay(T1L_US);
+            ndelay(T1L_NS);
         } else {
-            /* Bit 0: short HIGH, long LOW */
+            /* Bit 0: T0H HIGH (~400ns), T0L LOW (~900ns) */
             gpiod_set_raw_value(gpio, 0); /* → DIN HIGH */
-            udelay(T0H_US);
+            ndelay(T0H_NS);
             gpiod_set_raw_value(gpio, 1); /* → DIN LOW  */
-            udelay(T0L_US);
+            ndelay(T0L_NS);
         }
     }
 }
