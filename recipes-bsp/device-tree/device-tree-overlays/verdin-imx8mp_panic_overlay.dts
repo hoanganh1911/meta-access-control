@@ -11,10 +11,15 @@
     fragment@0 {
         target = <&iomuxc>;
         __overlay__ {
-            pinctrl_panic: panicgrp {
+            pinctrl_panic_in: panicingrp {
                 fsl,pins = <
                     MX8MP_IOMUXC_SAI1_TXD1__GPIO4_IO13          0x1c4 /* SODIMM 219 */
-                    MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14          0x1c4 /* SODIMM 217 */
+                >;
+            };
+
+            pinctrl_panic_out: panicoutgrp {
+                fsl,pins = <
+                    MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14          0x16  /* SODIMM 217 */
                 >;
             };
         };
@@ -26,19 +31,19 @@
             panic_signals {
                 compatible = "gpio-keys";
                 pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_panic>;
+                pinctrl-0 = <&pinctrl_panic_in>;
 
                 panic_in {
                     label = "SOM_PANIC_IN";
                     gpios = <&gpio4 13 GPIO_ACTIVE_LOW>;
-                    linux,code = <KEY_RESTART>;
+                    linux,code = <KEY_F1>;
                 };
             };
 
             panic_output {
                 compatible = "gpio-leds";
                 pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_panic>;
+                pinctrl-0 = <&pinctrl_panic_out>;
 
                 panic_out {
                     label = "SOM_PANIC_OUTPUT";

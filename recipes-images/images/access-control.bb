@@ -42,4 +42,5 @@ IMAGE_INSTALL:append = " \
     usb-c-test \
     rcwl1670-user \
     sr602-mod \
+    evtest \
 "
