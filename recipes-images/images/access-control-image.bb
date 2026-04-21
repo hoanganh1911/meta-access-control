@@ -1,23 +1,28 @@
-require recipes-images/images/tdx-reference-minimal-image.bb
-
 SUMMARY = "Custom Image for Access Control Project"
 DESCRIPTION = "Full system image and environment for Access Control with WiFi, Ethernet, UART and SSH support"
+LICENSE = "MIT"
 
-IMAGE_BASENAME = "access-control"
-IMAGE_NAME = "${MACHINE}_${IMAGE_BASENAME}"
+inherit core-image
 
-# Use OpenSSH instead of Dropbear (resolves conflicts)
+export IMAGE_BASENAME = "access-control-image"
+MACHINE_NAME ?= "${MACHINE}"
+IMAGE_NAME = "${MACHINE_NAME}_${IMAGE_BASENAME}"
+
+IMAGE_LINGUAS = "en-us"
+
+SYSTEMD_DEFAULT_TARGET = "graphical.target"
+
+ROOTFS_PKGMANAGE_PKGS ?= '${@oe.utils.conditional("ONLINE_PACKAGE_MANAGEMENT", "none", "", "${ROOTFS_PKGMANAGE}", d)}'
+
 IMAGE_FEATURES += "ssh-server-openssh"
 
-# Remove packagegroup-basic because it has a hard dependency on dropbear 
-# which conflicts with openssh. We will let IMAGE_FEATURES handle SSH.
-IMAGE_INSTALL:remove = "packagegroup-basic"
-
-# Explicitly exclude dropbear just to be safe
-PACKAGE_EXCLUDE = "dropbear"
 
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
+    packagegroup-boot \
+    packagegroup-basic \
+    udev-extra-rules \
+    ${ROOTFS_PKGMANAGE_PKGS} \
     v4l-utils \
     imx-gpu-viv-tools \
     imx-gst1.0-plugin \
@@ -44,3 +49,7 @@ IMAGE_INSTALL:append = " \
     sr602-mod \
     evtest \
 "
+IMAGE_DEV_MANAGER   = "udev"
+IMAGE_INIT_MANAGER  = "systemd"
+IMAGE_INITSCRIPTS   = " "
+IMAGE_LOGIN_MANAGER = "busybox shadow"
