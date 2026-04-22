@@ -14,13 +14,11 @@ SYSTEMD_DEFAULT_TARGET = "graphical.target"
 
 ROOTFS_PKGMANAGE_PKGS ?= '${@oe.utils.conditional("ONLINE_PACKAGE_MANAGEMENT", "none", "", "${ROOTFS_PKGMANAGE}", d)}'
 
-IMAGE_FEATURES += "ssh-server-openssh"
-
+IMAGE_FEATURES += "ssh-server-openssh debug-tweaks"
 
 # List of packages to add to the system
 IMAGE_INSTALL:append = " \
     packagegroup-boot \
-    packagegroup-basic \
     udev-extra-rules \
     ${ROOTFS_PKGMANAGE_PKGS} \
     v4l-utils \
@@ -48,6 +46,9 @@ IMAGE_INSTALL:append = " \
     rcwl1670-user \
     sr602-mod \
     evtest \
+    systemd-conf \
+    canutils \
+    iproute2 \
 "
 IMAGE_DEV_MANAGER   = "udev"
 IMAGE_INIT_MANAGER  = "systemd"
