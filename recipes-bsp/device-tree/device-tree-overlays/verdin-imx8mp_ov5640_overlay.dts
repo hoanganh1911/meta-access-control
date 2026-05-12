@@ -99,32 +99,3 @@
     status = "okay"; 
 };
 
-&iomuxc {
-
-    /delete-property/ pinctrl-0;
-
-    pinctrl-0 = <&pinctrl_gpio1>, <&pinctrl_gpio2>,
-		    <&pinctrl_gpio3>, <&pinctrl_gpio4>,
-		    <&pinctrl_gpio7>, <&pinctrl_gpio8>,
-		    <&pinctrl_gpio_hog2>, <&pinctrl_gpio_hog4>,
-		    <&pinctrl_hdmi_hog>;
-
-    /delete-node/ gpiohog3grp;
-
-    pinctrl_ov5640_gpios: ov5640gpiosgrp {
-        fsl,pins = <
-            MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08    0x106 
-            MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09    0x106
-        >;
-    };
-
-    pinctrl_ov5640_mclk: ov5640mclkgrp {
-        fsl,pins = <
-            MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2    0x156
-        >;
-    };
-};
-
-&fec {
-    status = "disabled";
-};
